@@ -600,7 +600,7 @@ function renderTrocas() {
     const total = podeAdarB.length + podeBdarA.length;
     const chips = (lista, cor) => lista.slice(0,24).map(f =>
       `<span class="chip" style="background:${cor}20;color:${cor};border-color:${cor}50">
-        ${FLAGS[f.s.id]} ${f.s.sigla}-${f.idx+1}${f.qtd>1?`<span style="color:#f59e0b"> ×${f.qtd}</span>`:""}
+        ${FLAGS[f.s.id]} ${f.s.sigla}-${f.s.id==="FWC1" ? (f.idx===0?"00":f.idx) : f.idx+1}${f.qtd>1?`<span style="color:#f59e0b"> ×${f.qtd}</span>`:""}
       </span>`).join("") +
       (lista.length > 24 ? `<span style="color:#64748b;font-size:11px;padding:2px 6px">+${lista.length-24} mais</span>` : "");
 
@@ -628,22 +628,41 @@ function renderTrocas() {
   const extrasHtml = nomes.map(j => {
     const c = corNome(j);
     const s = statsJogador(j);
-    let livres = 0;
+    const livresLista = [];
     SELECOES.forEach(sel => {
       state[j][sel.id].forEach((qtd, idx) => {
         if (qtd >= 2) {
           const outrosQueNaoTem = nomes.filter(o => o !== j && state[o][sel.id][idx] === 0).length;
-          livres += Math.max(0, (qtd-1) - outrosQueNaoTem);
+          const qtdLivre = Math.max(0, (qtd-1) - outrosQueNaoTem);
+          if (qtdLivre > 0) {
+            const numLabel = sel.id === "FWC1" ? (idx === 0 ? "00" : idx) : idx + 1;
+            livresLista.push({ sel, numLabel, qtdLivre });
+          }
         }
       });
     });
-    return `<div class="extras-row">
-      <span style="color:${c.accent};font-weight:600">${j}</span>
-      <div style="text-align:right">
-        <span style="color:#f59e0b;font-weight:700;font-size:15px">${s.extras}</span>
-        <span style="color:#475569;font-size:11px"> extras totais</span>
-        ${livres > 0 ? `<div style="font-size:10px;color:#64748b">${livres} livres p/ troca externa</div>` : ""}
+
+    const chipsLivres = livresLista.length > 0
+      ? `<div class="troca-chips" style="margin-top:6px">
+          ${livresLista.slice(0,30).map(f =>
+            `<span class="chip" style="background:${c.accent}15;color:${c.accent};border-color:${c.accent}40">
+              ${FLAGS[f.sel.id]} ${f.sel.sigla}-${f.numLabel}${f.qtdLivre>1?`<span style="color:#f59e0b"> ×${f.qtdLivre}</span>`:""}
+            </span>`).join("")}
+          ${livresLista.length > 30 ? `<span style="color:#64748b;font-size:11px;padding:2px 6px">+${livresLista.length-30} mais</span>` : ""}
+        </div>` : "";
+
+    return `<div style="padding:10px 0;border-bottom:1px solid #1e293b">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${livresLista.length>0?4:0}px">
+        <span style="color:${c.accent};font-weight:700;font-size:14px">${j}</span>
+        <div style="text-align:right">
+          <span style="color:#f59e0b;font-weight:700;font-size:15px">${s.extras}</span>
+          <span style="color:#475569;font-size:11px"> extras totais</span>
+          ${livresLista.length > 0
+            ? `<span style="color:#64748b;font-size:11px"> · ${livresLista.length} livres</span>`
+            : `<span style="color:#334155;font-size:11px"> · nenhuma livre</span>`}
+        </div>
       </div>
+      ${chipsLivres}
     </div>`;
   }).join("");
 
