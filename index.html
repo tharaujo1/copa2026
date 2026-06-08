@@ -241,9 +241,9 @@
 // Intro: FWC🏆(5) + FWC🌎(4) + FWC📜(11) = 20 | 50 seleções × 20 = 1000 | CC = 14 | TOTAL = 1034
 const SELECOES = [
   // ── INTRODUÇÃO ──────────────────────────────────────────────────────
-  { id:"FWC1", nome:"FWC Troféu",     sigla:"FWC🏆",  qtd:5,  esp:5,  flag:"🏆" },
-  { id:"FWC2", nome:"FWC Sedes",      sigla:"FWC🌎",  qtd:4,  esp:4,  flag:"🌎" },
-  { id:"FWC3", nome:"FWC Historia",   sigla:"FWC📜",  qtd:11, esp:0,  flag:"📜" },
+  { id:"FWC1", nome:"FWC Troféu",   sigla:"FWC-T", qtd:5,  esp:5,  flag:"🏆" },
+  { id:"FWC2", nome:"FWC Sedes",    sigla:"FWC-S", qtd:4,  esp:4,  flag:"🌎" },
+  { id:"FWC3", nome:"FWC Historia", sigla:"FWC-H", qtd:11, esp:0,  flag:"📜" },
   // ── SELEÇÕES (ordem do álbum) ────────────────────────────────────────
   { id:"MEX",  nome:"México",            sigla:"MEX",    qtd:20, esp:2,  flag:"🇲🇽" },
   { id:"RSA",  nome:"África do Sul",     sigla:"RSA",    qtd:20, esp:2,  flag:"🇿🇦" },
@@ -577,6 +577,40 @@ function renderAlbum() {
 }
 
 // ── TROCAS ───────────────────────────────────────────────────────────────────
+function confirmarTroca(de, para, selId, idx) {
+  if (state[de][selId][idx] >= 2 && state[para][selId][idx] === 0) {
+    state[de][selId][idx]--;
+    state[para][selId][idx]++;
+    salvarEstado();
+    renderConteudo();
+    renderJogadores();
+  }
+}
+
+function confirmarTodasTrocas(A, B) {
+  // A dá para B
+  SELECOES.forEach(s => {
+    state[A][s.id].forEach((qA, idx) => {
+      if (qA >= 2 && state[B][s.id][idx] === 0) {
+        state[A][s.id][idx]--;
+        state[B][s.id][idx]++;
+      }
+    });
+  });
+  // B dá para A
+  SELECOES.forEach(s => {
+    state[B][s.id].forEach((qB, idx) => {
+      if (qB >= 2 && state[A][s.id][idx] === 0) {
+        state[B][s.id][idx]--;
+        state[A][s.id][idx]++;
+      }
+    });
+  });
+  salvarEstado();
+  renderConteudo();
+  renderJogadores();
+}
+
 function renderTrocas() {
   const nomes = config.nomes;
   const pares = [];
@@ -595,20 +629,33 @@ function renderTrocas() {
     }
   }
 
+  const numLabel = (s, idx) => s.id === "FWC1" ? (idx === 0 ? "00" : idx) : idx + 1;
+
   const cardsHtml = pares.map(({ A, B, podeAdarB, podeBdarA }) => {
     const cA = corNome(A), cB = corNome(B);
     const total = podeAdarB.length + podeBdarA.length;
-    const chips = (lista, cor) => lista.slice(0,24).map(f =>
-      `<span class="chip" style="background:${cor}20;color:${cor};border-color:${cor}50">
-        ${FLAGS[f.s.id]} ${f.s.sigla}-${f.s.id==="FWC1" ? (f.idx===0?"00":f.idx) : f.idx+1}${f.qtd>1?`<span style="color:#f59e0b"> ×${f.qtd}</span>`:""}
+
+    const chips = (lista, de, para, cor) => lista.slice(0,24).map(f =>
+      `<span class="chip" style="background:${cor}20;color:${cor};border-color:${cor}50;display:inline-flex;align-items:center;gap:4px">
+        ${FLAGS[f.s.id]} ${f.s.sigla}-${numLabel(f.s, f.idx)}${f.qtd>1?`<span style="color:#f59e0b"> ×${f.qtd}</span>`:""}
+        <button onclick="confirmarTroca('${de}','${para}','${f.s.id}',${f.idx})"
+          style="background:#22c55e;border:none;color:#000;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:900;cursor:pointer">✓</button>
       </span>`).join("") +
       (lista.length > 24 ? `<span style="color:#64748b;font-size:11px;padding:2px 6px">+${lista.length-24} mais</span>` : "");
 
     const body = total > 0 ? `<div class="troca-body">
-      ${podeAdarB.length > 0 ? `<div class="troca-dir" style="color:${cA.accent}">${A} dá para ${B} (${podeAdarB.length}):</div>
-        <div class="troca-chips">${chips(podeAdarB, cA.accent)}</div>` : ""}
-      ${podeBdarA.length > 0 ? `<div class="troca-dir" style="color:${cB.accent}">${B} dá para ${A} (${podeBdarA.length}):</div>
-        <div class="troca-chips">${chips(podeBdarA, cB.accent)}</div>` : ""}
+      ${podeAdarB.length > 0 ? `
+        <div class="troca-dir" style="color:${cA.accent}">${A} dá para ${B} (${podeAdarB.length}):</div>
+        <div class="troca-chips">${chips(podeAdarB, A, B, cA.accent)}</div>` : ""}
+      ${podeBdarA.length > 0 ? `
+        <div class="troca-dir" style="color:${cB.accent}">${B} dá para ${A} (${podeBdarA.length}):</div>
+        <div class="troca-chips">${chips(podeBdarA, B, A, cB.accent)}</div>` : ""}
+      <div style="margin-top:10px;text-align:center">
+        <button onclick="confirmarTodasTrocas('${A}','${B}')"
+          style="background:linear-gradient(135deg,#22c55e,#16a34a);border:none;color:#000;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:900;cursor:pointer">
+          ✓ Confirmar todas as trocas ${A} ↔ ${B}
+        </button>
+      </div>
     </div>` : "";
 
     return `<div class="troca-card${total>0?" temtrocas":""}">
