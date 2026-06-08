@@ -202,7 +202,7 @@
 <div id="setup-screen">
   <div class="setup-trophy">🏆</div>
   <div class="setup-title">Copa 2026</div>
-  <div class="setup-sub">Álbum de Figurinhas Panini · 980 figurinhas</div>
+  <div class="setup-sub">Álbum de Figurinhas Panini · 994 figurinhas</div>
 
   <div class="setup-card">
     <div class="setup-label">Quantos colecionadores?</div>
@@ -226,7 +226,7 @@
 <div id="app-screen">
   <div id="header">
     <h1>🏆 <span style="color:#f59e0b">Copa 2026</span></h1>
-    <p id="header-sub">Panini · 980 figurinhas · 48 seleções</p>
+    <p id="header-sub">Panini · 994 figurinhas · 53 seções</p>
   </div>
   <div id="jogadores"></div>
   <div id="abas"></div>
@@ -237,60 +237,68 @@
 
 <script>
 // ─── SELEÇÕES ────────────────────────────────────────────────────────────────
+// Ordem exata do álbum Panini Copa 2026
+// Intro: FWC🏆(5) + FWC🌎(4) + FWC📜(11) = 20 | 50 seleções × 20 = 1000 | CC = 14 | TOTAL = 1034
 const SELECOES = [
-  { id:"intro", nome:"Introdução",      sigla:"INTRO", qtd:18, esp:4 },
-  { id:"BRA",   nome:"Brasil",          sigla:"BRA",   qtd:20, esp:2 },
-  { id:"ARG",   nome:"Argentina",       sigla:"ARG",   qtd:20, esp:2 },
-  { id:"FRA",   nome:"França",          sigla:"FRA",   qtd:20, esp:2 },
-  { id:"ENG",   nome:"Inglaterra",      sigla:"ENG",   qtd:20, esp:2 },
-  { id:"ESP",   nome:"Espanha",         sigla:"ESP",   qtd:20, esp:2 },
-  { id:"GER",   nome:"Alemanha",        sigla:"GER",   qtd:20, esp:2 },
-  { id:"POR",   nome:"Portugal",        sigla:"POR",   qtd:20, esp:2 },
-  { id:"NED",   nome:"Países Baixos",   sigla:"NED",   qtd:20, esp:2 },
-  { id:"BEL",   nome:"Bélgica",         sigla:"BEL",   qtd:20, esp:2 },
-  { id:"URU",   nome:"Uruguai",         sigla:"URU",   qtd:20, esp:2 },
-  { id:"COL",   nome:"Colômbia",        sigla:"COL",   qtd:20, esp:2 },
-  { id:"MEX",   nome:"México",          sigla:"MEX",   qtd:20, esp:2 },
-  { id:"USA",   nome:"EUA",             sigla:"USA",   qtd:20, esp:2 },
-  { id:"CAN",   nome:"Canadá",          sigla:"CAN",   qtd:20, esp:2 },
-  { id:"ECU",   nome:"Equador",         sigla:"ECU",   qtd:20, esp:2 },
-  { id:"PAR",   nome:"Paraguai",        sigla:"PAR",   qtd:20, esp:2 },
-  { id:"CHI",   nome:"Chile",           sigla:"CHI",   qtd:20, esp:2 },
-  { id:"VEN",   nome:"Venezuela",       sigla:"VEN",   qtd:20, esp:2 },
-  { id:"BOL",   nome:"Bolívia",         sigla:"BOL",   qtd:20, esp:2 },
-  { id:"PER",   nome:"Peru",            sigla:"PER",   qtd:20, esp:2 },
-  { id:"PAN",   nome:"Panamá",          sigla:"PAN",   qtd:20, esp:2 },
-  { id:"CRC",   nome:"Costa Rica",      sigla:"CRC",   qtd:20, esp:2 },
-  { id:"JAM",   nome:"Jamaica",         sigla:"JAM",   qtd:20, esp:2 },
-  { id:"HON",   nome:"Honduras",        sigla:"HON",   qtd:20, esp:2 },
-  { id:"SEN",   nome:"Senegal",         sigla:"SEN",   qtd:20, esp:2 },
-  { id:"MAR",   nome:"Marrocos",        sigla:"MAR",   qtd:20, esp:2 },
-  { id:"EGY",   nome:"Egito",           sigla:"EGY",   qtd:20, esp:2 },
-  { id:"NGA",   nome:"Nigéria",         sigla:"NGA",   qtd:20, esp:2 },
-  { id:"CMR",   nome:"Camarões",        sigla:"CMR",   qtd:20, esp:2 },
-  { id:"CIV",   nome:"Costa do Marfim", sigla:"CIV",   qtd:20, esp:2 },
-  { id:"GHA",   nome:"Gana",            sigla:"GHA",   qtd:20, esp:2 },
-  { id:"TUN",   nome:"Tunísia",         sigla:"TUN",   qtd:20, esp:2 },
-  { id:"ALG",   nome:"Argélia",         sigla:"ALG",   qtd:20, esp:2 },
-  { id:"JPN",   nome:"Japão",           sigla:"JPN",   qtd:20, esp:2 },
-  { id:"KOR",   nome:"Coreia do Sul",   sigla:"KOR",   qtd:20, esp:2 },
-  { id:"AUS",   nome:"Austrália",       sigla:"AUS",   qtd:20, esp:2 },
-  { id:"IRN",   nome:"Irã",             sigla:"IRN",   qtd:20, esp:2 },
-  { id:"SAU",   nome:"Arábia Saudita",  sigla:"SAU",   qtd:20, esp:2 },
-  { id:"QAT",   nome:"Catar",           sigla:"QAT",   qtd:20, esp:2 },
-  { id:"UZB",   nome:"Uzbequistão",     sigla:"UZB",   qtd:20, esp:2 },
-  { id:"CHN",   nome:"China",           sigla:"CHN",   qtd:20, esp:2 },
-  { id:"NZL",   nome:"Nova Zelândia",   sigla:"NZL",   qtd:20, esp:2 },
-  { id:"SUI",   nome:"Suíça",           sigla:"SUI",   qtd:20, esp:2 },
-  { id:"AUT",   nome:"Áustria",         sigla:"AUT",   qtd:20, esp:2 },
-  { id:"CRO",   nome:"Croácia",         sigla:"CRO",   qtd:20, esp:2 },
-  { id:"SRB",   nome:"Sérvia",          sigla:"SRB",   qtd:20, esp:2 },
-  { id:"DEN",   nome:"Dinamarca",       sigla:"DEN",   qtd:20, esp:2 },
-  { id:"POL",   nome:"Polônia",         sigla:"POL",   qtd:20, esp:2 },
-  { id:"SLO",   nome:"Eslovênia",       sigla:"SLO",   qtd:20, esp:2 },
+  // ── INTRODUÇÃO ──────────────────────────────────────────────────────
+  { id:"FWC1", nome:"FWC 🏆 Troféu",     sigla:"FWC🏆",  qtd:5,  esp:5,  flag:"🏆" },
+  { id:"FWC2", nome:"FWC 🌎 Sedes",      sigla:"FWC🌎",  qtd:4,  esp:4,  flag:"🌎" },
+  { id:"FWC3", nome:"FWC 📜 Historia",   sigla:"FWC📜",  qtd:11, esp:0,  flag:"📜" },
+  // ── SELEÇÕES (ordem do álbum) ────────────────────────────────────────
+  { id:"MEX",  nome:"México",            sigla:"MEX",    qtd:20, esp:2,  flag:"🇲🇽" },
+  { id:"RSA",  nome:"África do Sul",     sigla:"RSA",    qtd:20, esp:2,  flag:"🇿🇦" },
+  { id:"KOR",  nome:"Coreia do Sul",     sigla:"KOR",    qtd:20, esp:2,  flag:"🇰🇷" },
+  { id:"CZE",  nome:"Rep. Tcheca",       sigla:"CZE",    qtd:20, esp:2,  flag:"🇨🇿" },
+  { id:"CAN",  nome:"Canadá",            sigla:"CAN",    qtd:20, esp:2,  flag:"🇨🇦" },
+  { id:"BIH",  nome:"Bósnia-Herzeg.",    sigla:"BIH",    qtd:20, esp:2,  flag:"🇧🇦" },
+  { id:"QAT",  nome:"Catar",             sigla:"QAT",    qtd:20, esp:2,  flag:"🇶🇦" },
+  { id:"SUI",  nome:"Suíça",             sigla:"SUI",    qtd:20, esp:2,  flag:"🇨🇭" },
+  { id:"BRA",  nome:"Brasil",            sigla:"BRA",    qtd:20, esp:2,  flag:"🇧🇷" },
+  { id:"MAR",  nome:"Marrocos",          sigla:"MAR",    qtd:20, esp:2,  flag:"🇲🇦" },
+  { id:"HAI",  nome:"Haiti",             sigla:"HAI",    qtd:20, esp:2,  flag:"🇭🇹" },
+  { id:"SCO",  nome:"Escócia",           sigla:"SCO",    qtd:20, esp:2,  flag:"🏴󠁧󠁢󠁳󠁣󠁴󠁿" },
+  { id:"USA",  nome:"EUA",               sigla:"USA",    qtd:20, esp:2,  flag:"🇺🇸" },
+  { id:"PAR",  nome:"Paraguai",          sigla:"PAR",    qtd:20, esp:2,  flag:"🇵🇾" },
+  { id:"AUS",  nome:"Austrália",         sigla:"AUS",    qtd:20, esp:2,  flag:"🇦🇺" },
+  { id:"TUR",  nome:"Turquia",           sigla:"TUR",    qtd:20, esp:2,  flag:"🇹🇷" },
+  { id:"GER",  nome:"Alemanha",          sigla:"GER",    qtd:20, esp:2,  flag:"🇩🇪" },
+  { id:"CUW",  nome:"Curaçao",           sigla:"CUW",    qtd:20, esp:2,  flag:"🇨🇼" },
+  { id:"CIV",  nome:"Costa do Marfim",   sigla:"CIV",    qtd:20, esp:2,  flag:"🇨🇮" },
+  { id:"ECU",  nome:"Equador",           sigla:"ECU",    qtd:20, esp:2,  flag:"🇪🇨" },
+  { id:"NED",  nome:"Países Baixos",     sigla:"NED",    qtd:20, esp:2,  flag:"🇳🇱" },
+  { id:"JPN",  nome:"Japão",             sigla:"JPN",    qtd:20, esp:2,  flag:"🇯🇵" },
+  { id:"SWE",  nome:"Suécia",            sigla:"SWE",    qtd:20, esp:2,  flag:"🇸🇪" },
+  { id:"TUN",  nome:"Tunísia",           sigla:"TUN",    qtd:20, esp:2,  flag:"🇹🇳" },
+  { id:"BEL",  nome:"Bélgica",           sigla:"BEL",    qtd:20, esp:2,  flag:"🇧🇪" },
+  { id:"EGY",  nome:"Egito",             sigla:"EGY",    qtd:20, esp:2,  flag:"🇪🇬" },
+  { id:"IRN",  nome:"Irã",               sigla:"IRN",    qtd:20, esp:2,  flag:"🇮🇷" },
+  { id:"NZL",  nome:"Nova Zelândia",     sigla:"NZL",    qtd:20, esp:2,  flag:"🇳🇿" },
+  { id:"ESP",  nome:"Espanha",           sigla:"ESP",    qtd:20, esp:2,  flag:"🇪🇸" },
+  { id:"CPV",  nome:"Cabo Verde",        sigla:"CPV",    qtd:20, esp:2,  flag:"🇨🇻" },
+  { id:"KSA",  nome:"Arábia Saudita",    sigla:"KSA",    qtd:20, esp:2,  flag:"🇸🇦" },
+  { id:"URU",  nome:"Uruguai",           sigla:"URU",    qtd:20, esp:2,  flag:"🇺🇾" },
+  { id:"FRA",  nome:"França",            sigla:"FRA",    qtd:20, esp:2,  flag:"🇫🇷" },
+  { id:"SEN",  nome:"Senegal",           sigla:"SEN",    qtd:20, esp:2,  flag:"🇸🇳" },
+  { id:"IRQ",  nome:"Iraque",            sigla:"IRQ",    qtd:20, esp:2,  flag:"🇮🇶" },
+  { id:"NOR",  nome:"Noruega",           sigla:"NOR",    qtd:20, esp:2,  flag:"🇳🇴" },
+  { id:"ARG",  nome:"Argentina",         sigla:"ARG",    qtd:20, esp:2,  flag:"🇦🇷" },
+  { id:"ALG",  nome:"Argélia",           sigla:"ALG",    qtd:20, esp:2,  flag:"🇩🇿" },
+  { id:"AUT",  nome:"Áustria",           sigla:"AUT",    qtd:20, esp:2,  flag:"🇦🇹" },
+  { id:"JOR",  nome:"Jordânia",          sigla:"JOR",    qtd:20, esp:2,  flag:"🇯🇴" },
+  { id:"POR",  nome:"Portugal",          sigla:"POR",    qtd:20, esp:2,  flag:"🇵🇹" },
+  { id:"COD",  nome:"Congo (RDC)",       sigla:"COD",    qtd:20, esp:2,  flag:"🇨🇩" },
+  { id:"UZB",  nome:"Uzbequistão",       sigla:"UZB",    qtd:20, esp:2,  flag:"🇺🇿" },
+  { id:"COL",  nome:"Colômbia",          sigla:"COL",    qtd:20, esp:2,  flag:"🇨🇴" },
+  { id:"ENG",  nome:"Inglaterra",        sigla:"ENG",    qtd:20, esp:2,  flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
+  { id:"CRO",  nome:"Croácia",           sigla:"CRO",    qtd:20, esp:2,  flag:"🇭🇷" },
+  { id:"GHA",  nome:"Gana",              sigla:"GHA",    qtd:20, esp:2,  flag:"🇬🇭" },
+  { id:"PAN",  nome:"Panamá",            sigla:"PAN",    qtd:20, esp:2,  flag:"🇵🇦" },
+  // ── SEÇÃO FINAL ──────────────────────────────────────────────────────
+  { id:"CC",   nome:"CC (Especial)",     sigla:"CC",     qtd:14, esp:14, flag:"🥤" },
 ];
 
-const TOTAL = 980;
+// Total: 5+4+11 + 50×20 + 14 = 20 + 1000 + 14 = 1034
+const TOTAL = 994;
 const PALETA = [
   { bg:"#1a3a5c", accent:"#3b82f6" },
   { bg:"#1a4a2e", accent:"#22c55e" },
@@ -298,15 +306,8 @@ const PALETA = [
   { bg:"#3a1a4a", accent:"#a855f7" },
 ];
 const EMOJIS = ["🔵","🟢","🔴","🟣"];
-const FLAGS = {
-  intro:"🌍",BRA:"🇧🇷",ARG:"🇦🇷",FRA:"🇫🇷",ENG:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",ESP:"🇪🇸",GER:"🇩🇪",POR:"🇵🇹",
-  NED:"🇳🇱",BEL:"🇧🇪",URU:"🇺🇾",COL:"🇨🇴",MEX:"🇲🇽",USA:"🇺🇸",CAN:"🇨🇦",ECU:"🇪🇨",
-  PAR:"🇵🇾",CHI:"🇨🇱",VEN:"🇻🇪",BOL:"🇧🇴",PER:"🇵🇪",PAN:"🇵🇦",CRC:"🇨🇷",JAM:"🇯🇲",
-  HON:"🇭🇳",SEN:"🇸🇳",MAR:"🇲🇦",EGY:"🇪🇬",NGA:"🇳🇬",CMR:"🇨🇲",CIV:"🇨🇮",GHA:"🇬🇭",
-  TUN:"🇹🇳",ALG:"🇩🇿",JPN:"🇯🇵",KOR:"🇰🇷",AUS:"🇦🇺",IRN:"🇮🇷",SAU:"🇸🇦",QAT:"🇶🇦",
-  UZB:"🇺🇿",CHN:"🇨🇳",NZL:"🇳🇿",SUI:"🇨🇭",AUT:"🇦🇹",CRO:"🇭🇷",SRB:"🇷🇸",DEN:"🇩🇰",
-  POL:"🇵🇱",SLO:"🇸🇮"
-};
+// Flags lidas direto do campo flag em SELECOES
+const FLAGS = Object.fromEntries(SELECOES.map(s => [s.id, s.flag]));
 
 // ─── CONFIGURAÇÃO ─────────────────────────────────────────────────────────────
 let config = null;   // { nomes: [...], cores: [...] }
@@ -452,7 +453,7 @@ function iniciarApp() {
 
   // atualiza header com nomes
   const nomes = config.nomes.join(" · ");
-  document.getElementById("header-sub").textContent = `Panini · 980 figurinhas · ${nomes}`;
+  document.getElementById("header-sub").textContent = `Panini · 994 figurinhas · ${nomes}`;
   document.getElementById("footer").textContent = `⚽ Copa do Mundo FIFA 2026 · ${nomes}`;
 
   render();
@@ -477,7 +478,7 @@ function renderJogadores() {
       <div class="nome">${j}</div>
       <div class="contagem">
         <span style="color:${ativo?"#86efac":"#475569"}">${s.tem}</span>
-        <span style="color:#475569">/980</span>
+        <span style="color:#475569">/994</span>
       </div>
       <div class="barra-wrap">
         <div class="barra-fill" style="width:${s.pct}%;background:${c.accent}"></div>
@@ -671,7 +672,7 @@ function renderStats() {
         </div>
         <div style="text-align:right">
           <div style="font-size:26px;font-weight:900;color:#f0f4f8">${s.tem}</div>
-          <div style="font-size:10px;color:#64748b">/ 980</div>
+          <div style="font-size:10px;color:#64748b">/ 994</div>
         </div>
       </div>
       <div class="stat-barra-wrap">
@@ -789,4 +790,3 @@ if (carregarDados()) {
 </script>
 </body>
 </html>
-
