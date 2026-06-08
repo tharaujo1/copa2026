@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>🏆 Copa 2026 — Família Gonçalves</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: linear-gradient(135deg, #0a0a1a 0%, #0f1923 50%, #0a0a1a 100%);
+    font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+    color: #f0f4f8;
+    min-height: 100vh;
+    padding-bottom: 70px;
+  }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* HEADER */
+  #header {
+    background: linear-gradient(90deg, #1a1a2e, #16213e);
+    border-bottom: 2px solid #f59e0b;
+    padding: 14px 20px;
+    text-align: center;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 4px 20px rgba(245,158,11,0.2);
+  }
+  #header h1 { font-size: 20px; font-weight: 800; }
+  #header p  { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+
+  /* JOGADORES */
+  #jogadores { display: flex; gap: 8px; padding: 14px 16px 0; }
+  .btn-jogador {
+    flex: 1; padding: 10px 8px; border-radius: 12px;
+    border: 2px solid #2d3748; background: #1a1a2e;
+    color: #64748b; transition: all 0.2s; text-align: center;
+  }
+  .btn-jogador.ativo { box-shadow: 0 0 16px var(--accent,#3b82f6)44; }
+  .btn-jogador .nome { font-size: 15px; font-weight: 800; }
+  .btn-jogador .contagem { font-size: 11px; margin-top: 2px; }
+  .btn-jogador .barra-wrap { margin-top: 5px; height: 3px; border-radius: 2px; background: #1e293b; overflow: hidden; }
+  .btn-jogador .barra-fill { height: 100%; border-radius: 2px; transition: width 0.4s; }
+  .btn-jogador .pct { font-size: 10px; color: #64748b; margin-top: 2px; }
+
+  /* ABAS */
+  #abas { display: flex; margin: 12px 16px 0; border-radius: 10px; overflow: hidden; border: 1px solid #2d3748; }
+  .btn-aba {
+    flex: 1; padding: 10px 4px; border: none; background: #111827;
+    color: #64748b; font-size: 13px; font-weight: 400;
+    border-bottom: 2px solid transparent;
+  }
+  .btn-aba.ativa { font-weight: 700; }
+
+  /* CONTEÚDO */
+  #conteudo { padding: 12px 16px; }
+
+  /* LEGENDA */
+  .legenda { display: flex; gap: 8px; margin-bottom: 12px; font-size: 11px; flex-wrap: wrap; align-items: center; }
+  .legenda-item { display: flex; align-items: center; gap: 3px; }
+  .legenda-box { width: 14px; height: 14px; border-radius: 3px; }
+  .legenda-hint { color: #475569; font-size: 10px; margin-left: auto; }
+
+  /* SELEÇÃO ROW */
+  .sel-row {
+    margin-bottom: 8px;
+  }
+  .sel-header {
+    width: 100%; display: flex; align-items: center; gap: 8px;
+    padding: 9px 12px; border-radius: 10px;
+    background: linear-gradient(90deg, #1e293b, #111827);
+    border: 1px solid #2d3748; text-align: left;
+    transition: all 0.15s;
+  }
+  .sel-header.aberta { border-radius: 10px 10px 0 0; border-bottom: none; }
+  .sel-header.completa { border-color: var(--accent); box-shadow: 0 0 10px var(--accent)44; }
+  .sel-flag { font-size: 18px; }
+  .sel-info { flex: 1; min-width: 0; }
+  .sel-nome { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+  .sel-nome.completa-txt { }
+  .sel-sub { font-size: 10px; color: #64748b; margin-top: 1px; }
+  .sel-pct { font-size: 12px; font-weight: 700; color: #94a3b8; }
+  .sel-chevron { color: #475569; font-size: 12px; }
+
+  /* GRID FIGURINHAS */
+  .fig-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+    gap: 5px; padding: 10px 6px;
+    background: #0f1923;
+    border-radius: 0 0 10px 10px;
+    border: 1px solid #1e293b; border-top: none;
+  }
+  .fig-wrap { display: flex; flex-direction: column; gap: 2px; }
+  .fig-btn {
+    padding: 5px 2px; border-radius: 6px;
+    border: 1.5px solid #2d3748; background: #1e293b;
+    color: #475569; font-size: 11px; font-weight: 400;
+    line-height: 1.2; transition: all 0.15s;
+  }
+  .fig-btn.tem1  { border-radius: 6px 6px 3px 3px; }
+  .fig-qty { font-size: 10px; font-weight: 900; margin-top: 1px; }
+  .fig-sub {
+    padding: 2px; border-radius: 3px 3px 6px 6px;
+    background: #0f1923; font-size: 13px; font-weight: 900;
+    line-height: 1;
+  }
+
+  /* INFO BOX */
+  .info-box {
+    background: #1e293b; border-radius: 10px; padding: 10px 14px;
+    margin-bottom: 14px; font-size: 12px; color: #94a3b8;
+    border: 1px solid #334155;
+  }
+
+  /* PAR DE TROCA */
+  .troca-card {
+    background: #111827; border-radius: 12px; margin-bottom: 12px;
+    border: 1px solid #1e293b; overflow: hidden;
+  }
+  .troca-card.temtrocas { border-color: #f59e0b50; }
+  .troca-header {
+    padding: 10px 14px; background: #0f1923;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .troca-header.temtrocas { background: linear-gradient(90deg, #1a1a0a, #111827); }
+  .troca-par { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+  .troca-badge {
+    background: #f59e0b; color: #000; border-radius: 20px;
+    padding: 2px 10px; font-size: 12px; font-weight: 800;
+  }
+  .troca-body { padding: 10px 14px; }
+  .troca-dir { font-size: 11px; font-weight: 600; margin-bottom: 6px; }
+  .troca-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+  .chip {
+    border-radius: 4px; padding: 2px 6px; font-size: 11px; font-weight: 600;
+    border: 1px solid transparent;
+  }
+
+  /* EXTRAS FORA */
+  .extras-card {
+    background: #111827; border-radius: 12px; padding: 12px 14px;
+    border: 1px solid #334155; margin-top: 8px;
+  }
+  .extras-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 0; border-bottom: 1px solid #1e293b;
+  }
+  .extras-row:last-child { border-bottom: none; }
+
+  /* STATS */
+  .stat-card {
+    border-radius: 14px; padding: 14px 16px; margin-bottom: 10px;
+    border: 1px solid transparent;
+  }
+  .stat-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .stat-barra-wrap { height: 8px; border-radius: 4px; background: #0f1923; overflow: hidden; margin-bottom: 10px; }
+  .stat-barra { height: 100%; border-radius: 4px; transition: width 0.5s; }
+  .stat-mini { display: flex; gap: 8px; }
+  .stat-mini-item { flex: 1; background: #0f1923; border-radius: 8px; padding: 6px 8px; text-align: center; }
+  .stat-mini-val { font-size: 16px; font-weight: 800; }
+  .stat-mini-label { font-size: 9px; color: #475569; margin-top: 1px; }
+
+  .ranking-card {
+    background: #111827; border-radius: 12px; padding: 12px 14px;
+    border: 1px solid #1e293b; margin-bottom: 12px;
+  }
+  .ranking-titulo { font-size: 13px; font-weight: 700; color: #94a3b8; margin-bottom: 10px; }
+  .ranking-sel-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 0; border-bottom: 1px solid #1e293b;
+  }
+  .ranking-sel-row:last-child { border-bottom: none; }
+  .rank-barra-wrap { width: 60px; height: 4px; border-radius: 2px; background: #1e293b; }
+  .rank-barra { height: 100%; border-radius: 2px; }
+
+  .irmao-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 8px; margin-bottom: 6px;
+    border: 1px solid transparent;
+  }
+
+  /* RESET */
+  .reset-area { margin-top: 20px; text-align: center; }
+  .btn-reset { background: transparent; border: 1px solid #374151; color: #64748b; padding: 8px 16px; border-radius: 8px; font-size: 12px; }
+  .btn-confirmar { background: #dc2626; border: none; color: #fff; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; }
+  .btn-cancelar { background: #1e293b; border: 1px solid #334155; color: #94a3b8; padding: 8px 16px; border-radius: 8px; font-size: 12px; }
+  .confirm-row { display: flex; gap: 8px; justify-content: center; }
+
+  /* FOOTER */
+  #footer {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #0a0a1a; border-top: 1px solid #1e293b;
+    padding: 8px 16px; text-align: center;
+    font-size: 10px; color: #334155;
+  }
+
+  /* SALVO TOAST */
+  #toast {
+    position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%);
+    background: #22c55e; color: #000; padding: 6px 16px; border-radius: 20px;
+    font-size: 12px; font-weight: 700; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; z-index: 200;
+  }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>🏆 <span style="color:#f59e0b">Copa 2026</span> — Família Gonçalves</h1>
+  <p>Panini · 980 figurinhas · 48 seleções</p>
+</div>
+
+<div id="jogadores"></div>
+<div id="abas"></div>
+<div id="conteudo"></div>
+
+<div id="footer">⚽ Copa do Mundo FIFA 2026 · Gabriel · Lucca · Davi</div>
+<div id="toast">💾 Salvo!</div>
+
+<script>
+// ─── DADOS ───────────────────────────────────────────────────────────────────
+const SELECOES = [
+  { id:"intro", nome:"Introdução",      sigla:"INTRO", qtd:18, esp:4 },
+  { id:"BRA",   nome:"Brasil",          sigla:"BRA",   qtd:20, esp:2 },
+  { id:"ARG",   nome:"Argentina",       sigla:"ARG",   qtd:20, esp:2 },
+  { id:"FRA",   nome:"França",          sigla:"FRA",   qtd:20, esp:2 },
+  { id:"ENG",   nome:"Inglaterra",      sigla:"ENG",   qtd:20, esp:2 },
+  { id:"ESP",   nome:"Espanha",         sigla:"ESP",   qtd:20, esp:2 },
+  { id:"GER",   nome:"Alemanha",        sigla:"GER",   qtd:20, esp:2 },
+  { id:"POR",   nome:"Portugal",        sigla:"POR",   qtd:20, esp:2 },
+  { id:"NED",   nome:"Países Baixos",   sigla:"NED",   qtd:20, esp:2 },
+  { id:"BEL",   nome:"Bélgica",         sigla:"BEL",   qtd:20, esp:2 },
+  { id:"URU",   nome:"Uruguai",         sigla:"URU",   qtd:20, esp:2 },
+  { id:"COL",   nome:"Colômbia",        sigla:"COL",   qtd:20, esp:2 },
+  { id:"MEX",   nome:"México",          sigla:"MEX",   qtd:20, esp:2 },
+  { id:"USA",   nome:"EUA",             sigla:"USA",   qtd:20, esp:2 },
+  { id:"CAN",   nome:"Canadá",          sigla:"CAN",   qtd:20, esp:2 },
+  { id:"ECU",   nome:"Equador",         sigla:"ECU",   qtd:20, esp:2 },
+  { id:"PAR",   nome:"Paraguai",        sigla:"PAR",   qtd:20, esp:2 },
+  { id:"CHI",   nome:"Chile",           sigla:"CHI",   qtd:20, esp:2 },
+  { id:"VEN",   nome:"Venezuela",       sigla:"VEN",   qtd:20, esp:2 },
+  { id:"BOL",   nome:"Bolívia",         sigla:"BOL",   qtd:20, esp:2 },
+  { id:"PER",   nome:"Peru",            sigla:"PER",   qtd:20, esp:2 },
+  { id:"PAN",   nome:"Panamá",          sigla:"PAN",   qtd:20, esp:2 },
+  { id:"CRC",   nome:"Costa Rica",      sigla:"CRC",   qtd:20, esp:2 },
+  { id:"JAM",   nome:"Jamaica",         sigla:"JAM",   qtd:20, esp:2 },
+  { id:"HON",   nome:"Honduras",        sigla:"HON",   qtd:20, esp:2 },
+  { id:"SEN",   nome:"Senegal",         sigla:"SEN",   qtd:20, esp:2 },
+  { id:"MAR",   nome:"Marrocos",        sigla:"MAR",   qtd:20, esp:2 },
+  { id:"EGY",   nome:"Egito",           sigla:"EGY",   qtd:20, esp:2 },
+  { id:"NGA",   nome:"Nigéria",         sigla:"NGA",   qtd:20, esp:2 },
+  { id:"CMR",   nome:"Camarões",        sigla:"CMR",   qtd:20, esp:2 },
+  { id:"CIV",   nome:"Costa do Marfim", sigla:"CIV",   qtd:20, esp:2 },
+  { id:"GHA",   nome:"Gana",            sigla:"GHA",   qtd:20, esp:2 },
+  { id:"TUN",   nome:"Tunísia",         sigla:"TUN",   qtd:20, esp:2 },
+  { id:"ALG",   nome:"Argélia",         sigla:"ALG",   qtd:20, esp:2 },
+  { id:"JPN",   nome:"Japão",           sigla:"JPN",   qtd:20, esp:2 },
+  { id:"KOR",   nome:"Coreia do Sul",   sigla:"KOR",   qtd:20, esp:2 },
+  { id:"AUS",   nome:"Austrália",       sigla:"AUS",   qtd:20, esp:2 },
+  { id:"IRN",   nome:"Irã",             sigla:"IRN",   qtd:20, esp:2 },
+  { id:"SAU",   nome:"Arábia Saudita",  sigla:"SAU",   qtd:20, esp:2 },
+  { id:"QAT",   nome:"Catar",           sigla:"QAT",   qtd:20, esp:2 },
+  { id:"UZB",   nome:"Uzbequistão",     sigla:"UZB",   qtd:20, esp:2 },
+  { id:"CHN",   nome:"China",           sigla:"CHN",   qtd:20, esp:2 },
+  { id:"NZL",   nome:"Nova Zelândia",   sigla:"NZL",   qtd:20, esp:2 },
+  { id:"SUI",   nome:"Suíça",           sigla:"SUI",   qtd:20, esp:2 },
+  { id:"AUT",   nome:"Áustria",         sigla:"AUT",   qtd:20, esp:2 },
+  { id:"CRO",   nome:"Croácia",         sigla:"CRO",   qtd:20, esp:2 },
+  { id:"SRB",   nome:"Sérvia",          sigla:"SRB",   qtd:20, esp:2 },
+  { id:"DEN",   nome:"Dinamarca",       sigla:"DEN",   qtd:20, esp:2 },
+  { id:"POL",   nome:"Polônia",         sigla:"POL",   qtd:20, esp:2 },
+  { id:"SLO",   nome:"Eslovênia",       sigla:"SLO",   qtd:20, esp:2 },
+];
+
+const TOTAL = 980;
+const JOGADORES = ["Gabriel","Lucca","Davi"];
+const CORES = {
+  Gabriel: { bg:"#1a3a5c", accent:"#3b82f6" },
+  Lucca:   { bg:"#1a4a2e", accent:"#22c55e" },
+  Davi:    { bg:"#4a1a1a", accent:"#ef4444" },
+};
+const FLAGS = {
+  intro:"🌍",BRA:"🇧🇷",ARG:"🇦🇷",FRA:"🇫🇷",ENG:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",ESP:"🇪🇸",GER:"🇩🇪",POR:"🇵🇹",
+  NED:"🇳🇱",BEL:"🇧🇪",URU:"🇺🇾",COL:"🇨🇴",MEX:"🇲🇽",USA:"🇺🇸",CAN:"🇨🇦",ECU:"🇪🇨",
+  PAR:"🇵🇾",CHI:"🇨🇱",VEN:"🇻🇪",BOL:"🇧🇴",PER:"🇵🇪",PAN:"🇵🇦",CRC:"🇨🇷",JAM:"🇯🇲",
+  HON:"🇭🇳",SEN:"🇸🇳",MAR:"🇲🇦",EGY:"🇪🇬",NGA:"🇳🇬",CMR:"🇨🇲",CIV:"🇨🇮",GHA:"🇬🇭",
+  TUN:"🇹🇳",ALG:"🇩🇿",JPN:"🇯🇵",KOR:"🇰🇷",AUS:"🇦🇺",IRN:"🇮🇷",SAU:"🇸🇦",QAT:"🇶🇦",
+  UZB:"🇺🇿",CHN:"🇨🇳",NZL:"🇳🇿",SUI:"🇨🇭",AUT:"🇦🇹",CRO:"🇭🇷",SRB:"🇷🇸",DEN:"🇩🇰",
+  POL:"🇵🇱",SLO:"🇸🇮"
+};
+
+// ─── ESTADO ───────────────────────────────────────────────────────────────────
+function criarEstadoVazio() {
+  const s = {};
+  JOGADORES.forEach(j => {
+    s[j] = {};
+    SELECOES.forEach(sel => { s[j][sel.id] = new Array(sel.qtd).fill(0); });
+  });
+  return s;
+}
+
+function carregarEstado() {
+  try {
+    const raw = localStorage.getItem("copa2026v2");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // garante que todas as seleções existem (compatibilidade futura)
+      JOGADORES.forEach(j => {
+        if (!parsed[j]) parsed[j] = {};
+        SELECOES.forEach(sel => {
+          if (!parsed[j][sel.id] || parsed[j][sel.id].length !== sel.qtd) {
+            parsed[j][sel.id] = new Array(sel.qtd).fill(0);
+          }
+        });
+      });
+      return parsed;
+    }
+  } catch(e) {}
+  return criarEstadoVazio();
+}
+
+let toastTimer = null;
+function salvarEstado() {
+  try {
+    localStorage.setItem("copa2026v2", JSON.stringify(state));
+    const toast = document.getElementById("toast");
+    toast.classList.add("show");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 1200);
+  } catch(e) {}
+}
+
+let state = carregarEstado();
+let jogadorAtivo = "Gabriel";
+let abaAtiva = "album";
+let selecaoAberta = null;
+let confirmandoReset = false;
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function statsJogador(j) {
+  let tem = 0, extras = 0;
+  SELECOES.forEach(s => {
+    state[j][s.id].forEach(q => {
+      if (q >= 1) tem++;
+      if (q >= 2) extras += q - 1;
+    });
+  });
+  return { tem, extras, faltam: TOTAL - tem, pct: Math.round(tem / TOTAL * 100) };
+}
+
+function corBotao(qtd, accent) {
+  if (qtd === 0) return { bg:"#1e293b", borda:"#2d3748", txt:"#475569" };
+  if (qtd === 1) return { bg:accent+"25", borda:accent, txt:accent };
+  if (qtd === 2) return { bg:"#f59e0b25", borda:"#f59e0b", txt:"#f59e0b" };
+  return { bg:"#f9731625", borda:"#f97316", txt:"#f97316" };
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function render() {
+  renderJogadores();
+  renderAbas();
+  renderConteudo();
+}
+
+function renderJogadores() {
+  const el = document.getElementById("jogadores");
+  el.innerHTML = JOGADORES.map(j => {
+    const s = statsJogador(j);
+    const c = CORES[j];
+    const ativo = j === jogadorAtivo;
+    return `
+      <button class="btn-jogador${ativo?" ativo":""}"
+        style="--accent:${c.accent};${ativo?`border-color:${c.accent};background:linear-gradient(135deg,${c.bg},#1a1a2e);color:${c.accent};`:""}"
+        onclick="setJogador('${j}')">
+        <div class="nome">${j}</div>
+        <div class="contagem">
+          <span style="color:${ativo?"#86efac":"#475569"}">${s.tem}</span>
+          <span style="color:#475569">/980</span>
+        </div>
+        <div class="barra-wrap">
+          <div class="barra-fill" style="width:${s.pct}%;background:${c.accent}"></div>
+        </div>
+        <div class="pct">${s.pct}%</div>
+      </button>`;
+  }).join("");
+}
+
+function renderAbas() {
+  const el = document.getElementById("abas");
+  const abas = [["album","📖 Álbum"],["trocas","🔄 Trocas"],["stats","📊 Stats"]];
+  const c = CORES[jogadorAtivo];
+  el.innerHTML = abas.map(([key, label]) => {
+    const ativo = key === abaAtiva;
+    return `<button class="btn-aba${ativo?" ativa":""}"
+      style="${ativo?`background:linear-gradient(135deg,${c.bg},#1e293b);color:${c.accent};border-bottom:2px solid ${c.accent};`:""}"
+      onclick="setAba('${key}')">${label}</button>`;
+  }).join("");
+}
+
+function renderConteudo() {
+  const el = document.getElementById("conteudo");
+  if (abaAtiva === "album")  el.innerHTML = renderAlbum();
+  if (abaAtiva === "trocas") el.innerHTML = renderTrocas();
+  if (abaAtiva === "stats")  el.innerHTML = renderStats();
+}
+
+// ── ÁLBUM ────────────────────────────────────────────────────────────────────
+function renderAlbum() {
+  const c = CORES[jogadorAtivo];
+  const legendaItens = [
+    { bg:"#1e293b", borda:"#334155", label:"Falta" },
+    { bg:c.accent+"25", borda:c.accent, label:"×1" },
+    { bg:"#f59e0b25", borda:"#f59e0b", label:"×2" },
+    { bg:"#f9731625", borda:"#f97316", label:"×3+" },
+  ];
+  const legenda = `<div class="legenda">
+    ${legendaItens.map(l => `
+      <div class="legenda-item">
+        <div class="legenda-box" style="background:${l.bg};border:1.5px solid ${l.borda}"></div>
+        <span style="color:#94a3b8">${l.label}</span>
+      </div>`).join("")}
+    <div class="legenda-hint">toque <b style="color:#94a3b8">+</b> · botão <b style="color:#94a3b8">−</b></div>
+  </div>`;
+
+  const sels = SELECOES.map(s => {
+    const arr = state[jogadorAtivo][s.id];
+    const tem = arr.filter(v => v >= 1).length;
+    const extras = arr.reduce((a,v) => a + Math.max(0,v-1), 0);
+    const maxQ = Math.max(...arr);
+    const pct = Math.round(tem / s.qtd * 100);
+    const completa = tem === s.qtd;
+    const aberta = selecaoAberta === s.id;
+
+    const extrasLabel = extras > 0
+      ? `<span style="color:${maxQ>=3?"#f97316":"#f59e0b"}"> · ${extras} extra${extras>1?"s":""}</span>` : "";
+
+    let grid = "";
+    if (aberta) {
+      grid = `<div class="fig-grid">` + arr.map((qtd, idx) => {
+        const esp = idx < s.esp;
+        const cb = corBotao(qtd, c.accent);
+        const temBtn = qtd > 0;
+        return `<div class="fig-wrap">
+          <button class="fig-btn${temBtn?" tem1":""}"
+            style="border-color:${cb.borda};background:${cb.bg};color:${cb.txt};font-weight:${qtd>0?800:400};box-shadow:${qtd>=2?`0 0 8px ${cb.borda}40`:"none"}"
+            onclick="addFig('${s.id}',${idx})">
+            ${esp?"★":""}${idx+1}${qtd>0?`<div class="fig-qty">×${qtd}</div>`:""}
+          </button>
+          ${temBtn?`<button class="fig-sub" style="border:1.5px solid ${cb.borda};color:${cb.borda}" onclick="subFig('${s.id}',${idx})">−</button>`:""}
+        </div>`;
+      }).join("") + `</div>`;
+    }
+
+    return `<div class="sel-row">
+      <button class="sel-header${aberta?" aberta":""}${completa?" completa":""}"
+        style="${completa?`background:linear-gradient(90deg,${c.accent}20,${c.bg});border-color:${c.accent};box-shadow:0 0 10px ${c.accent}30`:""}"
+        onclick="toggleSel('${s.id}')">
+        <span class="sel-flag">${FLAGS[s.id]||"🏳️"}</span>
+        <div class="sel-info">
+          <div class="sel-nome" style="color:${completa?c.accent:"#e2e8f0"}">${s.nome}${completa?" ✓":""}</div>
+          <div class="sel-sub">${tem}/${s.qtd}${extrasLabel}</div>
+        </div>
+        <div class="sel-pct" style="color:${pct===100?c.accent:"#94a3b8"}">${pct}%</div>
+        <div class="sel-chevron">${aberta?"▲":"▼"}</div>
+      </button>
+      ${grid}
+    </div>`;
+  }).join("");
+
+  return legenda + sels;
+}
+
+// ── TROCAS ───────────────────────────────────────────────────────────────────
+function renderTrocas() {
+  const pares = [];
+  for (let i = 0; i < JOGADORES.length; i++) {
+    for (let j = i+1; j < JOGADORES.length; j++) {
+      const A = JOGADORES[i], B = JOGADORES[j];
+      const podeAdarB = [], podeBdarA = [];
+      SELECOES.forEach(s => {
+        state[A][s.id].forEach((qA, idx) => {
+          const qB = state[B][s.id][idx];
+          if (qA >= 2 && qB === 0) podeAdarB.push({ s, idx, qtd: qA-1 });
+          if (qB >= 2 && qA === 0) podeBdarA.push({ s, idx, qtd: qB-1 });
+        });
+      });
+      pares.push({ A, B, podeAdarB, podeBdarA });
+    }
+  }
+
+  const cardsHtml = pares.map(({ A, B, podeAdarB, podeBdarA }) => {
+    const cA = CORES[A], cB = CORES[B];
+    const total = podeAdarB.length + podeBdarA.length;
+
+    const chips = (lista, cor) => {
+      const visivel = lista.slice(0, 24);
+      const resto = lista.length - 24;
+      return visivel.map(f =>
+        `<span class="chip" style="background:${cor}20;color:${cor};border-color:${cor}50">
+          ${FLAGS[f.s.id]} ${f.s.sigla}-${f.idx+1}${f.qtd>1?`<span style="color:#f59e0b"> ×${f.qtd}</span>`:""}
+        </span>`).join("") +
+        (resto > 0 ? `<span style="color:#64748b;font-size:11px;padding:2px 6px">+${resto} mais</span>` : "");
+    };
+
+    const body = total > 0 ? `<div class="troca-body">
+      ${podeAdarB.length > 0 ? `
+        <div class="troca-dir" style="color:${cA.accent}">${A} dá para ${B} (${podeAdarB.length}):</div>
+        <div class="troca-chips">${chips(podeAdarB, cA.accent)}</div>` : ""}
+      ${podeBdarA.length > 0 ? `
+        <div class="troca-dir" style="color:${cB.accent}">${B} dá para ${A} (${podeBdarA.length}):</div>
+        <div class="troca-chips">${chips(podeBdarA, cB.accent)}</div>` : ""}
+    </div>` : "";
+
+    return `<div class="troca-card${total>0?" temtrocas":""}">
+      <div class="troca-header${total>0?" temtrocas":""}">
+        <div class="troca-par">
+          <span style="color:${cA.accent}">${A}</span>
+          <span style="color:#475569">↔</span>
+          <span style="color:${cB.accent}">${B}</span>
+        </div>
+        ${total>0
+          ? `<span class="troca-badge">${total} figurinha${total>1?"s":""}</span>`
+          : `<span style="color:#475569;font-size:12px">sem trocas agora</span>`}
+      </div>
+      ${body}
+    </div>`;
+  }).join("");
+
+  // Extras livres para fora
+  const extrasHtml = JOGADORES.map(j => {
+    const c = CORES[j];
+    const s = statsJogador(j);
+    let livres = 0;
+    SELECOES.forEach(sel => {
+      state[j][sel.id].forEach((qtd, idx) => {
+        if (qtd >= 2) {
+          const irmaosQueNaoTem = JOGADORES.filter(o => o !== j && state[o][sel.id][idx] === 0).length;
+          livres += Math.max(0, (qtd-1) - irmaosQueNaoTem);
+        }
+      });
+    });
+    return `<div class="extras-row">
+      <span style="color:${c.accent};font-weight:600">${j}</span>
+      <div style="text-align:right">
+        <span style="color:#f59e0b;font-weight:700;font-size:15px">${s.extras}</span>
+        <span style="color:#475569;font-size:11px"> extras totais</span>
+        ${livres > 0 ? `<div style="font-size:10px;color:#64748b">${livres} livres p/ troca externa</div>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+
+  return `
+    <div class="info-box">💡 Mostra extras que um irmão pode dar ao outro. <strong style="color:#f59e0b">Troquem entre vocês primeiro!</strong></div>
+    ${cardsHtml}
+    <div class="extras-card">
+      <div class="ranking-titulo">🔁 Extras livres para trocar fora da família</div>
+      ${extrasHtml}
+    </div>`;
+}
+
+// ── STATS ────────────────────────────────────────────────────────────────────
+function renderStats() {
+  const c = CORES[jogadorAtivo];
+
+  // Cards por jogador
+  const cardsHtml = JOGADORES.map(j => {
+    const s = statsJogador(j);
+    const cj = CORES[j];
+    return `<div class="stat-card" style="background:linear-gradient(135deg,${cj.bg},#111827);border-color:${cj.accent}40;box-shadow:0 4px 16px ${cj.accent}15">
+      <div class="stat-top">
+        <div>
+          <div style="font-size:18px;font-weight:800;color:${cj.accent}">${j}</div>
+          <div style="font-size:11px;color:#64748b;margin-top:1px">${s.pct}% completo</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:26px;font-weight:900;color:#f0f4f8">${s.tem}</div>
+          <div style="font-size:10px;color:#64748b">/ 980</div>
+        </div>
+      </div>
+      <div class="stat-barra-wrap">
+        <div class="stat-barra" style="width:${s.pct}%;background:linear-gradient(90deg,${cj.accent},${cj.accent}90)"></div>
+      </div>
+      <div class="stat-mini">
+        ${[["Faltam",s.faltam,"#94a3b8"],["Extras",s.extras,"#f59e0b"],["Únicas",s.tem,cj.accent]].map(([l,v,cor])=>
+          `<div class="stat-mini-item">
+            <div class="stat-mini-val" style="color:${cor}">${v}</div>
+            <div class="stat-mini-label">${l}</div>
+          </div>`).join("")}
+      </div>
+    </div>`;
+  }).join("");
+
+  // Top seleções do jogador ativo
+  const topSels = [...SELECOES].map(s => {
+    const arr = state[jogadorAtivo][s.id];
+    const tem = arr.filter(v => v >= 1).length;
+    return { ...s, tem, pct: Math.round(tem/s.qtd*100) };
+  }).sort((a,b) => b.pct - a.pct).slice(0, 8);
+
+  const topSelsHtml = topSels.map(s => `
+    <div class="ranking-sel-row">
+      <span style="font-size:16px">${FLAGS[s.id]||"🏳️"}</span>
+      <span style="font-size:12px;flex:1;color:#cbd5e1">${s.nome}</span>
+      <div class="rank-barra-wrap">
+        <div class="rank-barra" style="width:${s.pct}%;background:${s.pct===100?"#22c55e":c.accent}"></div>
+      </div>
+      <span style="font-size:11px;font-weight:700;min-width:28px;text-align:right;color:${s.pct===100?"#22c55e":"#94a3b8"}">${s.pct}%</span>
+    </div>`).join("");
+
+  // Ranking irmãos
+  const rankIrmaos = [...JOGADORES].map(j => ({ j, ...statsJogador(j) })).sort((a,b) => b.tem - a.tem);
+  const medals = ["🥇","🥈","🥉"];
+  const rankHtml = rankIrmaos.map((item, rank) => {
+    const cj = CORES[item.j];
+    const ativo = item.j === jogadorAtivo;
+    return `<div class="irmao-row" style="background:${ativo?cj.accent+"15":"#0f1923"};border-color:${ativo?cj.accent+"40":"transparent"}">
+      <span style="font-size:18px">${medals[rank]}</span>
+      <span style="font-weight:700;color:${cj.accent};flex:1">${item.j}</span>
+      <div style="text-align:right">
+        <div style="font-weight:800;font-size:16px;color:#f0f4f8">${item.tem}</div>
+        <div style="font-size:10px;color:#64748b">${item.pct}% · ${item.extras} extras</div>
+      </div>
+    </div>`;
+  }).join("");
+
+  const resetHtml = confirmandoReset
+    ? `<div class="confirm-row">
+        <button class="btn-confirmar" onclick="resetar()">Confirmar reset</button>
+        <button class="btn-cancelar" onclick="cancelarReset()">Cancelar</button>
+      </div>`
+    : `<button class="btn-reset" onclick="pedirReset()">🗑️ Zerar tudo</button>`;
+
+  return `
+    ${cardsHtml}
+    <div class="ranking-card">
+      <div class="ranking-titulo">🏅 Seleções mais completas — ${jogadorAtivo}</div>
+      ${topSelsHtml}
+    </div>
+    <div class="ranking-card">
+      <div class="ranking-titulo">🥇 Ranking entre os irmãos</div>
+      ${rankHtml}
+    </div>
+    <div class="reset-area">${resetHtml}</div>`;
+}
+
+// ─── AÇÕES ────────────────────────────────────────────────────────────────────
+function setJogador(j) {
+  jogadorAtivo = j;
+  selecaoAberta = null;
+  render();
+}
+
+function setAba(a) {
+  abaAtiva = a;
+  selecaoAberta = null;
+  render();
+}
+
+function toggleSel(id) {
+  selecaoAberta = selecaoAberta === id ? null : id;
+  renderConteudo();
+}
+
+function addFig(selId, idx) {
+  const val = state[jogadorAtivo][selId][idx];
+  if (val < 99) {
+    state[jogadorAtivo][selId][idx] = val + 1;
+    salvarEstado();
+    renderConteudo();
+    renderJogadores();
+  }
+}
+
+function subFig(selId, idx) {
+  const val = state[jogadorAtivo][selId][idx];
+  if (val > 0) {
+    state[jogadorAtivo][selId][idx] = val - 1;
+    salvarEstado();
+    renderConteudo();
+    renderJogadores();
+  }
+}
+
+function pedirReset() {
+  confirmandoReset = true;
+  renderConteudo();
+}
+
+function cancelarReset() {
+  confirmandoReset = false;
+  renderConteudo();
+}
+
+function resetar() {
+  state = criarEstadoVazio();
+  confirmandoReset = false;
+  localStorage.removeItem("copa2026v2");
+  render();
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
