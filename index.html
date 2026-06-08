@@ -5,154 +5,169 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>🏆 Copa 2026 — Família Gonçalves</title>
+<title>🏆 Copa 2026 — Álbum de Figurinhas</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body {
     background: linear-gradient(135deg, #0a0a1a 0%, #0f1923 50%, #0a0a1a 100%);
     font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
-    color: #f0f4f8;
-    min-height: 100vh;
-    padding-bottom: 70px;
+    color: #f0f4f8; min-height: 100vh; padding-bottom: 70px;
   }
   button { font-family: inherit; cursor: pointer; }
+  input  { font-family: inherit; }
 
-  /* HEADER */
+  /* ── SETUP SCREEN ── */
+  #setup-screen {
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 24px 20px;
+  }
+  .setup-trophy { font-size: 56px; margin-bottom: 12px; }
+  .setup-title  { font-size: 22px; font-weight: 900; color: #f59e0b; text-align: center; }
+  .setup-sub    { font-size: 13px; color: #64748b; margin-top: 4px; margin-bottom: 32px; text-align: center; }
+
+  .setup-card {
+    width: 100%; max-width: 380px;
+    background: #111827; border-radius: 16px; padding: 20px;
+    border: 1px solid #1e293b;
+  }
+  .setup-label { font-size: 13px; font-weight: 600; color: #94a3b8; margin-bottom: 10px; }
+
+  /* Seletor de quantidade */
+  .qtd-row { display: flex; gap: 8px; margin-bottom: 24px; }
+  .btn-qtd {
+    flex: 1; padding: 12px 4px; border-radius: 10px;
+    border: 2px solid #2d3748; background: #1e293b;
+    color: #64748b; font-size: 18px; font-weight: 800;
+    transition: all 0.2s;
+  }
+  .btn-qtd.sel {
+    border-color: #f59e0b; background: #f59e0b20;
+    color: #f59e0b; box-shadow: 0 0 12px #f59e0b30;
+  }
+
+  /* Cores disponíveis */
+  .CORES_DISP { display: none; }
+
+  /* Inputs de nome */
+  .nomes-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+  .nome-row { display: flex; align-items: center; gap: 10px; }
+  .nome-emoji { font-size: 20px; width: 28px; text-align: center; }
+  .nome-input {
+    flex: 1; padding: 10px 14px; border-radius: 10px;
+    border: 1.5px solid #2d3748; background: #1e293b;
+    color: #f0f4f8; font-size: 15px; font-weight: 600;
+    outline: none; transition: border-color 0.2s;
+  }
+  .nome-input:focus { border-color: #f59e0b; }
+  .nome-input::placeholder { color: #475569; font-weight: 400; }
+
+  .btn-comecar {
+    width: 100%; padding: 14px; border-radius: 12px;
+    border: none; background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #000; font-size: 16px; font-weight: 900;
+    letter-spacing: 0.3px; transition: opacity 0.2s;
+  }
+  .btn-comecar:disabled { opacity: 0.3; }
+
+  .setup-rodape { font-size: 11px; color: #334155; margin-top: 20px; text-align: center; }
+
+  /* ── APP SCREEN ── */
+  #app-screen { display: none; }
+
   #header {
     background: linear-gradient(90deg, #1a1a2e, #16213e);
     border-bottom: 2px solid #f59e0b;
-    padding: 14px 20px;
-    text-align: center;
+    padding: 12px 20px; text-align: center;
     position: sticky; top: 0; z-index: 100;
     box-shadow: 0 4px 20px rgba(245,158,11,0.2);
   }
-  #header h1 { font-size: 20px; font-weight: 800; }
-  #header p  { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+  #header h1 { font-size: 18px; font-weight: 800; }
+  #header p  { font-size: 10px; color: #94a3b8; margin-top: 2px; }
 
-  /* JOGADORES */
-  #jogadores { display: flex; gap: 8px; padding: 14px 16px 0; }
+  #jogadores { display: flex; gap: 6px; padding: 12px 12px 0; }
   .btn-jogador {
-    flex: 1; padding: 10px 8px; border-radius: 12px;
+    flex: 1; padding: 8px 6px; border-radius: 12px;
     border: 2px solid #2d3748; background: #1a1a2e;
     color: #64748b; transition: all 0.2s; text-align: center;
   }
-  .btn-jogador.ativo { box-shadow: 0 0 16px var(--accent,#3b82f6)44; }
-  .btn-jogador .nome { font-size: 15px; font-weight: 800; }
-  .btn-jogador .contagem { font-size: 11px; margin-top: 2px; }
-  .btn-jogador .barra-wrap { margin-top: 5px; height: 3px; border-radius: 2px; background: #1e293b; overflow: hidden; }
+  .btn-jogador.ativo { box-shadow: 0 0 16px var(--accent)44; }
+  .btn-jogador .nome { font-size: 13px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .btn-jogador .contagem { font-size: 10px; margin-top: 2px; }
+  .btn-jogador .barra-wrap { margin-top: 4px; height: 3px; border-radius: 2px; background: #1e293b; overflow: hidden; }
   .btn-jogador .barra-fill { height: 100%; border-radius: 2px; transition: width 0.4s; }
-  .btn-jogador .pct { font-size: 10px; color: #64748b; margin-top: 2px; }
+  .btn-jogador .pct { font-size: 9px; color: #64748b; margin-top: 2px; }
 
-  /* ABAS */
-  #abas { display: flex; margin: 12px 16px 0; border-radius: 10px; overflow: hidden; border: 1px solid #2d3748; }
+  #abas { display: flex; margin: 10px 12px 0; border-radius: 10px; overflow: hidden; border: 1px solid #2d3748; }
   .btn-aba {
-    flex: 1; padding: 10px 4px; border: none; background: #111827;
-    color: #64748b; font-size: 13px; font-weight: 400;
+    flex: 1; padding: 9px 4px; border: none; background: #111827;
+    color: #64748b; font-size: 12px; font-weight: 400;
     border-bottom: 2px solid transparent;
   }
   .btn-aba.ativa { font-weight: 700; }
 
-  /* CONTEÚDO */
-  #conteudo { padding: 12px 16px; }
+  #conteudo { padding: 12px 12px; }
 
-  /* LEGENDA */
   .legenda { display: flex; gap: 8px; margin-bottom: 12px; font-size: 11px; flex-wrap: wrap; align-items: center; }
   .legenda-item { display: flex; align-items: center; gap: 3px; }
   .legenda-box { width: 14px; height: 14px; border-radius: 3px; }
   .legenda-hint { color: #475569; font-size: 10px; margin-left: auto; }
 
-  /* SELEÇÃO ROW */
-  .sel-row {
-    margin-bottom: 8px;
-  }
+  .sel-row { margin-bottom: 8px; }
   .sel-header {
     width: 100%; display: flex; align-items: center; gap: 8px;
     padding: 9px 12px; border-radius: 10px;
     background: linear-gradient(90deg, #1e293b, #111827);
-    border: 1px solid #2d3748; text-align: left;
-    transition: all 0.15s;
+    border: 1px solid #2d3748; text-align: left; transition: all 0.15s;
   }
   .sel-header.aberta { border-radius: 10px 10px 0 0; border-bottom: none; }
-  .sel-header.completa { border-color: var(--accent); box-shadow: 0 0 10px var(--accent)44; }
   .sel-flag { font-size: 18px; }
   .sel-info { flex: 1; min-width: 0; }
   .sel-nome { font-size: 13px; font-weight: 600; color: #e2e8f0; }
-  .sel-nome.completa-txt { }
-  .sel-sub { font-size: 10px; color: #64748b; margin-top: 1px; }
-  .sel-pct { font-size: 12px; font-weight: 700; color: #94a3b8; }
+  .sel-sub  { font-size: 10px; color: #64748b; margin-top: 1px; }
+  .sel-pct  { font-size: 12px; font-weight: 700; color: #94a3b8; }
   .sel-chevron { color: #475569; font-size: 12px; }
 
-  /* GRID FIGURINHAS */
   .fig-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
     gap: 5px; padding: 10px 6px;
-    background: #0f1923;
-    border-radius: 0 0 10px 10px;
+    background: #0f1923; border-radius: 0 0 10px 10px;
     border: 1px solid #1e293b; border-top: none;
   }
   .fig-wrap { display: flex; flex-direction: column; gap: 2px; }
   .fig-btn {
     padding: 5px 2px; border-radius: 6px;
     border: 1.5px solid #2d3748; background: #1e293b;
-    color: #475569; font-size: 11px; font-weight: 400;
-    line-height: 1.2; transition: all 0.15s;
+    color: #475569; font-size: 11px; font-weight: 400; line-height: 1.2;
   }
-  .fig-btn.tem1  { border-radius: 6px 6px 3px 3px; }
+  .fig-btn.tem1 { border-radius: 6px 6px 3px 3px; }
   .fig-qty { font-size: 10px; font-weight: 900; margin-top: 1px; }
   .fig-sub {
     padding: 2px; border-radius: 3px 3px 6px 6px;
-    background: #0f1923; font-size: 13px; font-weight: 900;
-    line-height: 1;
+    background: #0f1923; font-size: 13px; font-weight: 900; line-height: 1;
   }
 
-  /* INFO BOX */
   .info-box {
     background: #1e293b; border-radius: 10px; padding: 10px 14px;
-    margin-bottom: 14px; font-size: 12px; color: #94a3b8;
-    border: 1px solid #334155;
+    margin-bottom: 14px; font-size: 12px; color: #94a3b8; border: 1px solid #334155;
   }
-
-  /* PAR DE TROCA */
-  .troca-card {
-    background: #111827; border-radius: 12px; margin-bottom: 12px;
-    border: 1px solid #1e293b; overflow: hidden;
-  }
+  .troca-card { background: #111827; border-radius: 12px; margin-bottom: 12px; border: 1px solid #1e293b; overflow: hidden; }
   .troca-card.temtrocas { border-color: #f59e0b50; }
-  .troca-header {
-    padding: 10px 14px; background: #0f1923;
-    display: flex; align-items: center; justify-content: space-between;
-  }
+  .troca-header { padding: 10px 14px; background: #0f1923; display: flex; align-items: center; justify-content: space-between; }
   .troca-header.temtrocas { background: linear-gradient(90deg, #1a1a0a, #111827); }
   .troca-par { display: flex; align-items: center; gap: 8px; font-weight: 700; }
-  .troca-badge {
-    background: #f59e0b; color: #000; border-radius: 20px;
-    padding: 2px 10px; font-size: 12px; font-weight: 800;
-  }
+  .troca-badge { background: #f59e0b; color: #000; border-radius: 20px; padding: 2px 10px; font-size: 12px; font-weight: 800; }
   .troca-body { padding: 10px 14px; }
   .troca-dir { font-size: 11px; font-weight: 600; margin-bottom: 6px; }
   .troca-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
-  .chip {
-    border-radius: 4px; padding: 2px 6px; font-size: 11px; font-weight: 600;
-    border: 1px solid transparent;
-  }
+  .chip { border-radius: 4px; padding: 2px 6px; font-size: 11px; font-weight: 600; border: 1px solid transparent; }
 
-  /* EXTRAS FORA */
-  .extras-card {
-    background: #111827; border-radius: 12px; padding: 12px 14px;
-    border: 1px solid #334155; margin-top: 8px;
-  }
-  .extras-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 7px 0; border-bottom: 1px solid #1e293b;
-  }
+  .extras-card { background: #111827; border-radius: 12px; padding: 12px 14px; border: 1px solid #334155; margin-top: 8px; }
+  .extras-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #1e293b; }
   .extras-row:last-child { border-bottom: none; }
 
-  /* STATS */
-  .stat-card {
-    border-radius: 14px; padding: 14px 16px; margin-bottom: 10px;
-    border: 1px solid transparent;
-  }
+  .stat-card { border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; border: 1px solid transparent; }
   .stat-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
   .stat-barra-wrap { height: 8px; border-radius: 4px; background: #0f1923; overflow: hidden; margin-bottom: 10px; }
   .stat-barra { height: 100%; border-radius: 4px; transition: width 0.5s; }
@@ -161,66 +176,67 @@
   .stat-mini-val { font-size: 16px; font-weight: 800; }
   .stat-mini-label { font-size: 9px; color: #475569; margin-top: 1px; }
 
-  .ranking-card {
-    background: #111827; border-radius: 12px; padding: 12px 14px;
-    border: 1px solid #1e293b; margin-bottom: 12px;
-  }
+  .ranking-card { background: #111827; border-radius: 12px; padding: 12px 14px; border: 1px solid #1e293b; margin-bottom: 12px; }
   .ranking-titulo { font-size: 13px; font-weight: 700; color: #94a3b8; margin-bottom: 10px; }
-  .ranking-sel-row {
-    display: flex; align-items: center; gap: 8px;
-    padding: 5px 0; border-bottom: 1px solid #1e293b;
-  }
+  .ranking-sel-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid #1e293b; }
   .ranking-sel-row:last-child { border-bottom: none; }
   .rank-barra-wrap { width: 60px; height: 4px; border-radius: 2px; background: #1e293b; }
   .rank-barra { height: 100%; border-radius: 2px; }
+  .irmao-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; margin-bottom: 6px; border: 1px solid transparent; }
 
-  .irmao-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 8px 10px; border-radius: 8px; margin-bottom: 6px;
-    border: 1px solid transparent;
-  }
-
-  /* RESET */
   .reset-area { margin-top: 20px; text-align: center; }
   .btn-reset { background: transparent; border: 1px solid #374151; color: #64748b; padding: 8px 16px; border-radius: 8px; font-size: 12px; }
   .btn-confirmar { background: #dc2626; border: none; color: #fff; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; }
   .btn-cancelar { background: #1e293b; border: 1px solid #334155; color: #94a3b8; padding: 8px 16px; border-radius: 8px; font-size: 12px; }
   .confirm-row { display: flex; gap: 8px; justify-content: center; }
+  .btn-reconfigurar { background: transparent; border: 1px solid #374151; color: #475569; padding: 8px 16px; border-radius: 8px; font-size: 12px; margin-top: 8px; }
 
-  /* FOOTER */
-  #footer {
-    position: fixed; bottom: 0; left: 0; right: 0;
-    background: #0a0a1a; border-top: 1px solid #1e293b;
-    padding: 8px 16px; text-align: center;
-    font-size: 10px; color: #334155;
-  }
-
-  /* SALVO TOAST */
-  #toast {
-    position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%);
-    background: #22c55e; color: #000; padding: 6px 16px; border-radius: 20px;
-    font-size: 12px; font-weight: 700; opacity: 0; transition: opacity 0.3s;
-    pointer-events: none; z-index: 200;
-  }
+  #footer { position: fixed; bottom: 0; left: 0; right: 0; background: #0a0a1a; border-top: 1px solid #1e293b; padding: 8px 16px; text-align: center; font-size: 10px; color: #334155; }
+  #toast { position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%); background: #22c55e; color: #000; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 200; }
   #toast.show { opacity: 1; }
 </style>
 </head>
 <body>
 
-<div id="header">
-  <h1>🏆 <span style="color:#f59e0b">Copa 2026</span> — Família Gonçalves</h1>
-  <p>Panini · 980 figurinhas · 48 seleções</p>
+<!-- TELA DE CONFIGURAÇÃO -->
+<div id="setup-screen">
+  <div class="setup-trophy">🏆</div>
+  <div class="setup-title">Copa 2026</div>
+  <div class="setup-sub">Álbum de Figurinhas Panini · 980 figurinhas</div>
+
+  <div class="setup-card">
+    <div class="setup-label">Quantos colecionadores?</div>
+    <div class="qtd-row">
+      <button class="btn-qtd" onclick="setQtd(1)">1</button>
+      <button class="btn-qtd" onclick="setQtd(2)">2</button>
+      <button class="btn-qtd sel" onclick="setQtd(3)">3</button>
+      <button class="btn-qtd" onclick="setQtd(4)">4</button>
+    </div>
+
+    <div class="setup-label">Nomes dos colecionadores</div>
+    <div class="nomes-grid" id="nomes-grid"></div>
+
+    <button class="btn-comecar" id="btn-comecar" onclick="comecar()">Começar! ⚽</button>
+  </div>
+
+  <div class="setup-rodape">Seus dados ficam salvos neste celular</div>
 </div>
 
-<div id="jogadores"></div>
-<div id="abas"></div>
-<div id="conteudo"></div>
-
-<div id="footer">⚽ Copa do Mundo FIFA 2026 · Gabriel · Lucca · Davi</div>
-<div id="toast">💾 Salvo!</div>
+<!-- APP PRINCIPAL -->
+<div id="app-screen">
+  <div id="header">
+    <h1>🏆 <span style="color:#f59e0b">Copa 2026</span></h1>
+    <p id="header-sub">Panini · 980 figurinhas · 48 seleções</p>
+  </div>
+  <div id="jogadores"></div>
+  <div id="abas"></div>
+  <div id="conteudo"></div>
+  <div id="footer">⚽ Copa do Mundo FIFA 2026</div>
+  <div id="toast">💾 Salvo!</div>
+</div>
 
 <script>
-// ─── DADOS ───────────────────────────────────────────────────────────────────
+// ─── SELEÇÕES ────────────────────────────────────────────────────────────────
 const SELECOES = [
   { id:"intro", nome:"Introdução",      sigla:"INTRO", qtd:18, esp:4 },
   { id:"BRA",   nome:"Brasil",          sigla:"BRA",   qtd:20, esp:2 },
@@ -275,12 +291,13 @@ const SELECOES = [
 ];
 
 const TOTAL = 980;
-const JOGADORES = ["Gabriel","Lucca","Davi"];
-const CORES = {
-  Gabriel: { bg:"#1a3a5c", accent:"#3b82f6" },
-  Lucca:   { bg:"#1a4a2e", accent:"#22c55e" },
-  Davi:    { bg:"#4a1a1a", accent:"#ef4444" },
-};
+const PALETA = [
+  { bg:"#1a3a5c", accent:"#3b82f6" },
+  { bg:"#1a4a2e", accent:"#22c55e" },
+  { bg:"#4a1a1a", accent:"#ef4444" },
+  { bg:"#3a1a4a", accent:"#a855f7" },
+];
+const EMOJIS = ["🔵","🟢","🔴","🟣"];
 const FLAGS = {
   intro:"🌍",BRA:"🇧🇷",ARG:"🇦🇷",FRA:"🇫🇷",ENG:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",ESP:"🇪🇸",GER:"🇩🇪",POR:"🇵🇹",
   NED:"🇳🇱",BEL:"🇧🇪",URU:"🇺🇾",COL:"🇨🇴",MEX:"🇲🇽",USA:"🇺🇸",CAN:"🇨🇦",ECU:"🇪🇨",
@@ -291,58 +308,126 @@ const FLAGS = {
   POL:"🇵🇱",SLO:"🇸🇮"
 };
 
+// ─── CONFIGURAÇÃO ─────────────────────────────────────────────────────────────
+let config = null;   // { nomes: [...], cores: [...] }
+let state  = null;
+let jogadorAtivo = 0;
+let abaAtiva = "album";
+let selecaoAberta = null;
+let confirmandoReset = false;
+let qtdSel = 3;
+
+// Setup screen
+function setQtd(n) {
+  qtdSel = n;
+  document.querySelectorAll(".btn-qtd").forEach((b,i) => {
+    b.classList.toggle("sel", i+1 === n);
+  });
+  renderNomesGrid();
+}
+
+function renderNomesGrid() {
+  const grid = document.getElementById("nomes-grid");
+  const placeholders = ["Primeiro nome","Segundo nome","Terceiro nome","Quarto nome"];
+  grid.innerHTML = Array.from({length: qtdSel}, (_,i) => `
+    <div class="nome-row">
+      <span class="nome-emoji">${EMOJIS[i]}</span>
+      <input class="nome-input" id="nome-${i}" type="text" maxlength="12"
+        placeholder="${placeholders[i]}" oninput="validarNomes()" />
+    </div>`).join("");
+  validarNomes();
+  // foca no primeiro campo
+  setTimeout(() => { const el = document.getElementById("nome-0"); if(el) el.focus(); }, 100);
+}
+
+function validarNomes() {
+  const btn = document.getElementById("btn-comecar");
+  let ok = true;
+  for(let i = 0; i < qtdSel; i++) {
+    const el = document.getElementById("nome-"+i);
+    if (!el || el.value.trim() === "") { ok = false; break; }
+  }
+  btn.disabled = !ok;
+}
+
+function comecar() {
+  const nomes = [];
+  for(let i = 0; i < qtdSel; i++) {
+    nomes.push(document.getElementById("nome-"+i).value.trim());
+  }
+  const cores = PALETA.slice(0, qtdSel);
+  config = { nomes, cores };
+  state = criarEstadoVazio();
+  salvarConfig();
+  iniciarApp();
+}
+
 // ─── ESTADO ───────────────────────────────────────────────────────────────────
 function criarEstadoVazio() {
   const s = {};
-  JOGADORES.forEach(j => {
+  config.nomes.forEach(j => {
     s[j] = {};
     SELECOES.forEach(sel => { s[j][sel.id] = new Array(sel.qtd).fill(0); });
   });
   return s;
 }
 
-function carregarEstado() {
+function salvarConfig() {
+  try { localStorage.setItem("copa2026-config", JSON.stringify(config)); } catch(e) {}
+}
+
+function salvarEstado() {
   try {
-    const raw = localStorage.getItem("copa2026v2");
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      // garante que todas as seleções existem (compatibilidade futura)
-      JOGADORES.forEach(j => {
-        if (!parsed[j]) parsed[j] = {};
+    localStorage.setItem("copa2026-state", JSON.stringify(state));
+    const toast = document.getElementById("toast");
+    if (toast) {
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 1200);
+    }
+  } catch(e) {}
+}
+
+function carregarDados() {
+  try {
+    const rawConfig = localStorage.getItem("copa2026-config");
+    const rawState  = localStorage.getItem("copa2026-state");
+    if (rawConfig) {
+      config = JSON.parse(rawConfig);
+      // garante compatibilidade
+      config.nomes.forEach(j => {
+        if (!state) state = {};
+        if (!state[j]) state[j] = {};
         SELECOES.forEach(sel => {
-          if (!parsed[j][sel.id] || parsed[j][sel.id].length !== sel.qtd) {
-            parsed[j][sel.id] = new Array(sel.qtd).fill(0);
+          if (!state[j][sel.id] || state[j][sel.id].length !== sel.qtd) {
+            state[j][sel.id] = new Array(sel.qtd).fill(0);
           }
         });
       });
-      return parsed;
+      if (rawState) state = JSON.parse(rawState);
+      // revalida após carregar state
+      config.nomes.forEach(j => {
+        if (!state[j]) state[j] = {};
+        SELECOES.forEach(sel => {
+          if (!state[j][sel.id] || state[j][sel.id].length !== sel.qtd) {
+            state[j][sel.id] = new Array(sel.qtd).fill(0);
+          }
+        });
+      });
+      return true;
     }
   } catch(e) {}
-  return criarEstadoVazio();
+  return false;
 }
-
-let toastTimer = null;
-function salvarEstado() {
-  try {
-    localStorage.setItem("copa2026v2", JSON.stringify(state));
-    const toast = document.getElementById("toast");
-    toast.classList.add("show");
-    if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove("show"), 1200);
-  } catch(e) {}
-}
-
-let state = carregarEstado();
-let jogadorAtivo = "Gabriel";
-let abaAtiva = "album";
-let selecaoAberta = null;
-let confirmandoReset = false;
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
-function statsJogador(j) {
+function corDoJogador(idx) { return config.cores[idx] || PALETA[0]; }
+function idxJogador(nome)  { return config.nomes.indexOf(nome); }
+function corNome(nome)     { return corDoJogador(idxJogador(nome)); }
+
+function statsJogador(nome) {
   let tem = 0, extras = 0;
   SELECOES.forEach(s => {
-    state[j][s.id].forEach(q => {
+    state[nome][s.id].forEach(q => {
       if (q >= 1) tem++;
       if (q >= 2) extras += q - 1;
     });
@@ -357,6 +442,22 @@ function corBotao(qtd, accent) {
   return { bg:"#f9731625", borda:"#f97316", txt:"#f97316" };
 }
 
+// ─── INICIAR APP ──────────────────────────────────────────────────────────────
+function iniciarApp() {
+  document.getElementById("setup-screen").style.display = "none";
+  document.getElementById("app-screen").style.display = "block";
+  jogadorAtivo = 0;
+  abaAtiva = "album";
+  selecaoAberta = null;
+
+  // atualiza header com nomes
+  const nomes = config.nomes.join(" · ");
+  document.getElementById("header-sub").textContent = `Panini · 980 figurinhas · ${nomes}`;
+  document.getElementById("footer").textContent = `⚽ Copa do Mundo FIFA 2026 · ${nomes}`;
+
+  render();
+}
+
 // ─── RENDER ───────────────────────────────────────────────────────────────────
 function render() {
   renderJogadores();
@@ -366,32 +467,35 @@ function render() {
 
 function renderJogadores() {
   const el = document.getElementById("jogadores");
-  el.innerHTML = JOGADORES.map(j => {
+  el.innerHTML = config.nomes.map((j, i) => {
     const s = statsJogador(j);
-    const c = CORES[j];
-    const ativo = j === jogadorAtivo;
-    return `
-      <button class="btn-jogador${ativo?" ativo":""}"
-        style="--accent:${c.accent};${ativo?`border-color:${c.accent};background:linear-gradient(135deg,${c.bg},#1a1a2e);color:${c.accent};`:""}"
-        onclick="setJogador('${j}')">
-        <div class="nome">${j}</div>
-        <div class="contagem">
-          <span style="color:${ativo?"#86efac":"#475569"}">${s.tem}</span>
-          <span style="color:#475569">/980</span>
-        </div>
-        <div class="barra-wrap">
-          <div class="barra-fill" style="width:${s.pct}%;background:${c.accent}"></div>
-        </div>
-        <div class="pct">${s.pct}%</div>
-      </button>`;
+    const c = corDoJogador(i);
+    const ativo = i === jogadorAtivo;
+    return `<button class="btn-jogador${ativo?" ativo":""}"
+      style="--accent:${c.accent};${ativo?`border-color:${c.accent};background:linear-gradient(135deg,${c.bg},#1a1a2e);color:${c.accent};`:""}"
+      onclick="setJogador(${i})">
+      <div class="nome">${j}</div>
+      <div class="contagem">
+        <span style="color:${ativo?"#86efac":"#475569"}">${s.tem}</span>
+        <span style="color:#475569">/980</span>
+      </div>
+      <div class="barra-wrap">
+        <div class="barra-fill" style="width:${s.pct}%;background:${c.accent}"></div>
+      </div>
+      <div class="pct">${s.pct}%</div>
+    </button>`;
   }).join("");
 }
 
 function renderAbas() {
   const el = document.getElementById("abas");
+  const c = corDoJogador(jogadorAtivo);
   const abas = [["album","📖 Álbum"],["trocas","🔄 Trocas"],["stats","📊 Stats"]];
-  const c = CORES[jogadorAtivo];
-  el.innerHTML = abas.map(([key, label]) => {
+  // esconde trocas se só 1 colecionador
+  const abasFiltradas = config.nomes.length === 1
+    ? abas.filter(a => a[0] !== "trocas")
+    : abas;
+  el.innerHTML = abasFiltradas.map(([key, label]) => {
     const ativo = key === abaAtiva;
     return `<button class="btn-aba${ativo?" ativa":""}"
       style="${ativo?`background:linear-gradient(135deg,${c.bg},#1e293b);color:${c.accent};border-bottom:2px solid ${c.accent};`:""}"
@@ -408,7 +512,8 @@ function renderConteudo() {
 
 // ── ÁLBUM ────────────────────────────────────────────────────────────────────
 function renderAlbum() {
-  const c = CORES[jogadorAtivo];
+  const nomeAtivo = config.nomes[jogadorAtivo];
+  const c = corDoJogador(jogadorAtivo);
   const legendaItens = [
     { bg:"#1e293b", borda:"#334155", label:"Falta" },
     { bg:c.accent+"25", borda:c.accent, label:"×1" },
@@ -416,23 +521,21 @@ function renderAlbum() {
     { bg:"#f9731625", borda:"#f97316", label:"×3+" },
   ];
   const legenda = `<div class="legenda">
-    ${legendaItens.map(l => `
-      <div class="legenda-item">
-        <div class="legenda-box" style="background:${l.bg};border:1.5px solid ${l.borda}"></div>
-        <span style="color:#94a3b8">${l.label}</span>
-      </div>`).join("")}
+    ${legendaItens.map(l=>`<div class="legenda-item">
+      <div class="legenda-box" style="background:${l.bg};border:1.5px solid ${l.borda}"></div>
+      <span style="color:#94a3b8">${l.label}</span>
+    </div>`).join("")}
     <div class="legenda-hint">toque <b style="color:#94a3b8">+</b> · botão <b style="color:#94a3b8">−</b></div>
   </div>`;
 
   const sels = SELECOES.map(s => {
-    const arr = state[jogadorAtivo][s.id];
+    const arr = state[nomeAtivo][s.id];
     const tem = arr.filter(v => v >= 1).length;
     const extras = arr.reduce((a,v) => a + Math.max(0,v-1), 0);
     const maxQ = Math.max(...arr);
     const pct = Math.round(tem / s.qtd * 100);
     const completa = tem === s.qtd;
     const aberta = selecaoAberta === s.id;
-
     const extrasLabel = extras > 0
       ? `<span style="color:${maxQ>=3?"#f97316":"#f59e0b"}"> · ${extras} extra${extras>1?"s":""}</span>` : "";
 
@@ -474,10 +577,11 @@ function renderAlbum() {
 
 // ── TROCAS ───────────────────────────────────────────────────────────────────
 function renderTrocas() {
+  const nomes = config.nomes;
   const pares = [];
-  for (let i = 0; i < JOGADORES.length; i++) {
-    for (let j = i+1; j < JOGADORES.length; j++) {
-      const A = JOGADORES[i], B = JOGADORES[j];
+  for (let i = 0; i < nomes.length; i++) {
+    for (let j = i+1; j < nomes.length; j++) {
+      const A = nomes[i], B = nomes[j];
       const podeAdarB = [], podeBdarA = [];
       SELECOES.forEach(s => {
         state[A][s.id].forEach((qA, idx) => {
@@ -491,25 +595,18 @@ function renderTrocas() {
   }
 
   const cardsHtml = pares.map(({ A, B, podeAdarB, podeBdarA }) => {
-    const cA = CORES[A], cB = CORES[B];
+    const cA = corNome(A), cB = corNome(B);
     const total = podeAdarB.length + podeBdarA.length;
-
-    const chips = (lista, cor) => {
-      const visivel = lista.slice(0, 24);
-      const resto = lista.length - 24;
-      return visivel.map(f =>
-        `<span class="chip" style="background:${cor}20;color:${cor};border-color:${cor}50">
-          ${FLAGS[f.s.id]} ${f.s.sigla}-${f.idx+1}${f.qtd>1?`<span style="color:#f59e0b"> ×${f.qtd}</span>`:""}
-        </span>`).join("") +
-        (resto > 0 ? `<span style="color:#64748b;font-size:11px;padding:2px 6px">+${resto} mais</span>` : "");
-    };
+    const chips = (lista, cor) => lista.slice(0,24).map(f =>
+      `<span class="chip" style="background:${cor}20;color:${cor};border-color:${cor}50">
+        ${FLAGS[f.s.id]} ${f.s.sigla}-${f.idx+1}${f.qtd>1?`<span style="color:#f59e0b"> ×${f.qtd}</span>`:""}
+      </span>`).join("") +
+      (lista.length > 24 ? `<span style="color:#64748b;font-size:11px;padding:2px 6px">+${lista.length-24} mais</span>` : "");
 
     const body = total > 0 ? `<div class="troca-body">
-      ${podeAdarB.length > 0 ? `
-        <div class="troca-dir" style="color:${cA.accent}">${A} dá para ${B} (${podeAdarB.length}):</div>
+      ${podeAdarB.length > 0 ? `<div class="troca-dir" style="color:${cA.accent}">${A} dá para ${B} (${podeAdarB.length}):</div>
         <div class="troca-chips">${chips(podeAdarB, cA.accent)}</div>` : ""}
-      ${podeBdarA.length > 0 ? `
-        <div class="troca-dir" style="color:${cB.accent}">${B} dá para ${A} (${podeBdarA.length}):</div>
+      ${podeBdarA.length > 0 ? `<div class="troca-dir" style="color:${cB.accent}">${B} dá para ${A} (${podeBdarA.length}):</div>
         <div class="troca-chips">${chips(podeBdarA, cB.accent)}</div>` : ""}
     </div>` : "";
 
@@ -523,21 +620,19 @@ function renderTrocas() {
         ${total>0
           ? `<span class="troca-badge">${total} figurinha${total>1?"s":""}</span>`
           : `<span style="color:#475569;font-size:12px">sem trocas agora</span>`}
-      </div>
-      ${body}
+      </div>${body}
     </div>`;
   }).join("");
 
-  // Extras livres para fora
-  const extrasHtml = JOGADORES.map(j => {
-    const c = CORES[j];
+  const extrasHtml = nomes.map(j => {
+    const c = corNome(j);
     const s = statsJogador(j);
     let livres = 0;
     SELECOES.forEach(sel => {
       state[j][sel.id].forEach((qtd, idx) => {
         if (qtd >= 2) {
-          const irmaosQueNaoTem = JOGADORES.filter(o => o !== j && state[o][sel.id][idx] === 0).length;
-          livres += Math.max(0, (qtd-1) - irmaosQueNaoTem);
+          const outrosQueNaoTem = nomes.filter(o => o !== j && state[o][sel.id][idx] === 0).length;
+          livres += Math.max(0, (qtd-1) - outrosQueNaoTem);
         }
       });
     });
@@ -552,22 +647,22 @@ function renderTrocas() {
   }).join("");
 
   return `
-    <div class="info-box">💡 Mostra extras que um irmão pode dar ao outro. <strong style="color:#f59e0b">Troquem entre vocês primeiro!</strong></div>
+    <div class="info-box">💡 Mostra extras que um colecionador pode dar ao outro. <strong style="color:#f59e0b">Troquem entre vocês primeiro!</strong></div>
     ${cardsHtml}
     <div class="extras-card">
-      <div class="ranking-titulo">🔁 Extras livres para trocar fora da família</div>
+      <div class="ranking-titulo">🔁 Extras livres para trocar fora</div>
       ${extrasHtml}
     </div>`;
 }
 
 // ── STATS ────────────────────────────────────────────────────────────────────
 function renderStats() {
-  const c = CORES[jogadorAtivo];
+  const c = corDoJogador(jogadorAtivo);
+  const nomeAtivo = config.nomes[jogadorAtivo];
 
-  // Cards por jogador
-  const cardsHtml = JOGADORES.map(j => {
+  const cardsHtml = config.nomes.map((j, i) => {
     const s = statsJogador(j);
-    const cj = CORES[j];
+    const cj = corDoJogador(i);
     return `<div class="stat-card" style="background:linear-gradient(135deg,${cj.bg},#111827);border-color:${cj.accent}40;box-shadow:0 4px 16px ${cj.accent}15">
       <div class="stat-top">
         <div>
@@ -592,9 +687,8 @@ function renderStats() {
     </div>`;
   }).join("");
 
-  // Top seleções do jogador ativo
   const topSels = [...SELECOES].map(s => {
-    const arr = state[jogadorAtivo][s.id];
+    const arr = state[nomeAtivo][s.id];
     const tem = arr.filter(v => v >= 1).length;
     return { ...s, tem, pct: Math.round(tem/s.qtd*100) };
   }).sort((a,b) => b.pct - a.pct).slice(0, 8);
@@ -609,99 +703,90 @@ function renderStats() {
       <span style="font-size:11px;font-weight:700;min-width:28px;text-align:right;color:${s.pct===100?"#22c55e":"#94a3b8"}">${s.pct}%</span>
     </div>`).join("");
 
-  // Ranking irmãos
-  const rankIrmaos = [...JOGADORES].map(j => ({ j, ...statsJogador(j) })).sort((a,b) => b.tem - a.tem);
-  const medals = ["🥇","🥈","🥉"];
-  const rankHtml = rankIrmaos.map((item, rank) => {
-    const cj = CORES[item.j];
-    const ativo = item.j === jogadorAtivo;
+  const rankIrmaos = config.nomes.map((j,i) => ({ j, i, ...statsJogador(j) })).sort((a,b) => b.tem - a.tem);
+  const medals = ["🥇","🥈","🥉","🏅"];
+  const rankHtml = config.nomes.length > 1 ? rankIrmaos.map((item, rank) => {
+    const cj = corDoJogador(item.i);
+    const ativo = item.i === jogadorAtivo;
     return `<div class="irmao-row" style="background:${ativo?cj.accent+"15":"#0f1923"};border-color:${ativo?cj.accent+"40":"transparent"}">
-      <span style="font-size:18px">${medals[rank]}</span>
+      <span style="font-size:18px">${medals[rank]||"🏅"}</span>
       <span style="font-weight:700;color:${cj.accent};flex:1">${item.j}</span>
       <div style="text-align:right">
         <div style="font-weight:800;font-size:16px;color:#f0f4f8">${item.tem}</div>
         <div style="font-size:10px;color:#64748b">${item.pct}% · ${item.extras} extras</div>
       </div>
     </div>`;
-  }).join("");
+  }).join("") : "";
 
   const resetHtml = confirmandoReset
     ? `<div class="confirm-row">
         <button class="btn-confirmar" onclick="resetar()">Confirmar reset</button>
         <button class="btn-cancelar" onclick="cancelarReset()">Cancelar</button>
       </div>`
-    : `<button class="btn-reset" onclick="pedirReset()">🗑️ Zerar tudo</button>`;
+    : `<div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+        <button class="btn-reset" onclick="pedirReset()">🗑️ Zerar figurinhas</button>
+        <button class="btn-reconfigurar" onclick="reconfigurar()">⚙️ Mudar nomes / quantidade</button>
+      </div>`;
 
   return `
     ${cardsHtml}
     <div class="ranking-card">
-      <div class="ranking-titulo">🏅 Seleções mais completas — ${jogadorAtivo}</div>
+      <div class="ranking-titulo">🏅 Seleções mais completas — ${nomeAtivo}</div>
       ${topSelsHtml}
     </div>
-    <div class="ranking-card">
-      <div class="ranking-titulo">🥇 Ranking entre os irmãos</div>
-      ${rankHtml}
-    </div>
+    ${config.nomes.length > 1 ? `<div class="ranking-card"><div class="ranking-titulo">🥇 Ranking</div>${rankHtml}</div>` : ""}
     <div class="reset-area">${resetHtml}</div>`;
 }
 
 // ─── AÇÕES ────────────────────────────────────────────────────────────────────
-function setJogador(j) {
-  jogadorAtivo = j;
-  selecaoAberta = null;
-  render();
-}
-
-function setAba(a) {
-  abaAtiva = a;
-  selecaoAberta = null;
-  render();
-}
-
-function toggleSel(id) {
-  selecaoAberta = selecaoAberta === id ? null : id;
-  renderConteudo();
-}
+function setJogador(i) { jogadorAtivo = i; selecaoAberta = null; render(); }
+function setAba(a)     { abaAtiva = a; selecaoAberta = null; render(); }
+function toggleSel(id) { selecaoAberta = selecaoAberta === id ? null : id; renderConteudo(); }
 
 function addFig(selId, idx) {
-  const val = state[jogadorAtivo][selId][idx];
-  if (val < 99) {
-    state[jogadorAtivo][selId][idx] = val + 1;
-    salvarEstado();
-    renderConteudo();
-    renderJogadores();
+  const nome = config.nomes[jogadorAtivo];
+  if (state[nome][selId][idx] < 99) {
+    state[nome][selId][idx]++;
+    salvarEstado(); renderConteudo(); renderJogadores();
   }
 }
-
 function subFig(selId, idx) {
-  const val = state[jogadorAtivo][selId][idx];
-  if (val > 0) {
-    state[jogadorAtivo][selId][idx] = val - 1;
-    salvarEstado();
-    renderConteudo();
-    renderJogadores();
+  const nome = config.nomes[jogadorAtivo];
+  if (state[nome][selId][idx] > 0) {
+    state[nome][selId][idx]--;
+    salvarEstado(); renderConteudo(); renderJogadores();
   }
 }
 
-function pedirReset() {
-  confirmandoReset = true;
-  renderConteudo();
-}
-
-function cancelarReset() {
-  confirmandoReset = false;
-  renderConteudo();
-}
+function pedirReset()   { confirmandoReset = true;  renderConteudo(); }
+function cancelarReset(){ confirmandoReset = false; renderConteudo(); }
 
 function resetar() {
   state = criarEstadoVazio();
   confirmandoReset = false;
-  localStorage.removeItem("copa2026v2");
+  localStorage.removeItem("copa2026-state");
   render();
 }
 
+function reconfigurar() {
+  // limpa tudo e volta para o setup
+  localStorage.removeItem("copa2026-config");
+  localStorage.removeItem("copa2026-state");
+  config = null; state = null;
+  document.getElementById("app-screen").style.display = "none";
+  document.getElementById("setup-screen").style.display = "flex";
+  setQtd(3);
+}
+
 // ─── INIT ────────────────────────────────────────────────────────────────────
-render();
+// Tenta carregar dados salvos
+if (carregarDados()) {
+  iniciarApp();
+} else {
+  // Mostra setup
+  setQtd(3);
+}
 </script>
 </body>
 </html>
+
