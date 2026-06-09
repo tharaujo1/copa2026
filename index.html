@@ -698,13 +698,20 @@ function renderTrocas() {
     const cA = corNome(A), cB = corNome(B);
     const total = podeAdarB.length + podeBdarA.length;
 
-    const chips = (lista, de, para, cor) => lista.slice(0,24).map(f =>
+    // Ordena pela posição da seção no álbum, depois pelo número da figurinha
+    const ordenar = (lista) => [...lista].sort((a, b) => {
+      const iA = SELECOES.findIndex(s => s.id === a.s.id);
+      const iB = SELECOES.findIndex(s => s.id === b.s.id);
+      if (iA !== iB) return iA - iB;
+      return a.idx - b.idx;
+    });
+
+    const chips = (lista, de, para, cor) => ordenar(lista).map(f =>
       `<span class="chip" style="background:${cor}20;color:${cor};border-color:${cor}50;display:inline-flex;align-items:center;gap:4px">
         ${FLAGS[f.s.id]} ${f.s.sigla}-${numLabel(f.s, f.idx)}${f.qtd>1?`<span style="color:#f59e0b"> ×${f.qtd}</span>`:""}
         <button onclick="confirmarTroca('${de}','${para}','${f.s.id}',${f.idx})"
           style="background:#22c55e;border:none;color:#000;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:900;cursor:pointer">✓</button>
-      </span>`).join("") +
-      (lista.length > 24 ? `<span style="color:#64748b;font-size:11px;padding:2px 6px">+${lista.length-24} mais</span>` : "");
+      </span>`).join("");
 
     const body = total > 0 ? `<div class="troca-body">
       ${podeAdarB.length > 0 ? `
@@ -742,8 +749,10 @@ function renderTrocas() {
     SELECOES.forEach(sel => {
       state[j][sel.id].forEach((qtd, idx) => {
         if (qtd >= 2) {
-          const outrosQueNaoTem = nomes.filter(o => o !== j && state[o][sel.id][idx] === 0).length;
-          const qtdLivre = Math.max(0, (qtd-1) - outrosQueNaoTem);
+          const outros = nomes.filter(o => o !== j);
+          const priorizados = distribuirExtras(j, outros, sel.id, idx, qtd - 1);
+          // extras livres = total extras - quantos foram priorizados para irmãos
+          const qtdLivre = Math.max(0, (qtd - 1) - priorizados.length);
           if (qtdLivre > 0) {
             const numLabel = sel.inicio !== undefined ? (sel.inicio+idx === 0 ? "00" : sel.inicio+idx) : idx + 1;
             livresLista.push({ sel, numLabel, qtdLivre });
