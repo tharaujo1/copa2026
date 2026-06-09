@@ -664,21 +664,45 @@ function renderTrocas() {
         state[A][s.id].forEach((qA, idx) => {
           const qB = state[B][s.id][idx];
           const extras = qA - 1;
-          if (extras <= 0) return;
-          // Verifica se B tem prioridade para receber esta figurinha
-          const outros = nomes.filter(o => o !== A);
-          const priorizados = distribuirExtras(A, outros, s.id, idx, extras);
-          if (priorizados.includes(B) && qB === 0)
-            podeAdarB.push({ s, idx, qtd: 1 });
+          if (extras <= 0 || qB !== 0) return;
+          // Quantas extras sobram para B após priorizar outros que também precisam
+          const outrosQueNaoTem = nomes.filter(o => o !== A && o !== B && state[o][s.id][idx] === 0);
+          // Ordena outros por prioridade (menos figurinhas primeiro)
+          const outrosOrdenados = [...outrosQueNaoTem].sort((x, y) => {
+            const diff = totalTem(x) - totalTem(y);
+            return diff !== 0 ? diff : config.nomes.indexOf(x) - config.nomes.indexOf(y);
+          });
+          // Desconta extras usados pelos outros com maior prioridade que B
+          const temB = totalTem(B);
+          let extrasUsadosAntes = 0;
+          for (const outro of outrosOrdenados) {
+            const temOutro = totalTem(outro);
+            if (temOutro < temB || (temOutro === temB && config.nomes.indexOf(outro) < config.nomes.indexOf(B))) {
+              extrasUsadosAntes++;
+            }
+          }
+          const extrasParaB = Math.max(0, extras - extrasUsadosAntes);
+          if (extrasParaB > 0) podeAdarB.push({ s, idx, qtd: extrasParaB });
         });
         state[B][s.id].forEach((qB, idx) => {
           const qA = state[A][s.id][idx];
           const extras = qB - 1;
-          if (extras <= 0) return;
-          const outros = nomes.filter(o => o !== B);
-          const priorizados = distribuirExtras(B, outros, s.id, idx, extras);
-          if (priorizados.includes(A) && qA === 0)
-            podeBdarA.push({ s, idx, qtd: 1 });
+          if (extras <= 0 || qA !== 0) return;
+          const outrosQueNaoTem = nomes.filter(o => o !== B && o !== A && state[o][s.id][idx] === 0);
+          const outrosOrdenados = [...outrosQueNaoTem].sort((x, y) => {
+            const diff = totalTem(x) - totalTem(y);
+            return diff !== 0 ? diff : config.nomes.indexOf(x) - config.nomes.indexOf(y);
+          });
+          const temA = totalTem(A);
+          let extrasUsadosAntes = 0;
+          for (const outro of outrosOrdenados) {
+            const temOutro = totalTem(outro);
+            if (temOutro < temA || (temOutro === temA && config.nomes.indexOf(outro) < config.nomes.indexOf(A))) {
+              extrasUsadosAntes++;
+            }
+          }
+          const extrasParaA = Math.max(0, extras - extrasUsadosAntes);
+          if (extrasParaA > 0) podeBdarA.push({ s, idx, qtd: extrasParaA });
         });
       });
       pares.push({ A, B, podeAdarB, podeBdarA });
@@ -698,11 +722,10 @@ function renderTrocas() {
     const cA = corNome(A), cB = corNome(B);
     const total = podeAdarB.length + podeBdarA.length;
 
-    // Ordena pela posição da seção no álbum, depois pelo número da figurinha
+    // Ordena alfabeticamente pela sigla, depois pelo número
     const ordenar = (lista) => [...lista].sort((a, b) => {
-      const iA = SELECOES.findIndex(s => s.id === a.s.id);
-      const iB = SELECOES.findIndex(s => s.id === b.s.id);
-      if (iA !== iB) return iA - iB;
+      if (a.s.sigla < b.s.sigla) return -1;
+      if (a.s.sigla > b.s.sigla) return 1;
       return a.idx - b.idx;
     });
 
