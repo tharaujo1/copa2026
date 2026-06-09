@@ -238,12 +238,13 @@
 <script>
 // ─── SELEÇÕES ────────────────────────────────────────────────────────────────
 // Ordem exata do álbum Panini Copa 2026
-// Intro: FWC🏆(5) + FWC🌎(4) + FWC📜(11) = 20 | 50 seleções × 20 = 1000 | CC = 14 | TOTAL = 1034
+// FWC Troféu (00-04) + FWC Sedes (05-08) no início
+// FWC História (09-19) penúltima + CC última
+// Total: 5+4 + 48×20 + 11 + 14 = 9 + 960 + 25 = 994
 const SELECOES = [
-  // ── INTRODUÇÃO ──────────────────────────────────────────────────────
-  { id:"FWC1", nome:"FWC Troféu",   sigla:"FWC-T", qtd:5,  esp:5,  flag:"🏆" },
-  { id:"FWC2", nome:"FWC Sedes",    sigla:"FWC-S", qtd:4,  esp:4,  flag:"🌎" },
-  { id:"FWC3", nome:"FWC Historia", sigla:"FWC-H", qtd:11, esp:0,  flag:"📜" },
+  // ── INÍCIO: FWC Troféu e Sedes ───────────────────────────────────────
+  { id:"FWC1", nome:"FWC Troféu",   sigla:"FWC-T", qtd:5,  esp:5,  flag:"🏆", inicio:0  },
+  { id:"FWC2", nome:"FWC Sedes",    sigla:"FWC-S", qtd:4,  esp:4,  flag:"🌎", inicio:5  },
   // ── SELEÇÕES (ordem do álbum) ────────────────────────────────────────
   { id:"MEX",  nome:"México",            sigla:"MEX",    qtd:20, esp:2,  flag:"🇲🇽" },
   { id:"RSA",  nome:"África do Sul",     sigla:"RSA",    qtd:20, esp:2,  flag:"🇿🇦" },
@@ -293,8 +294,10 @@ const SELECOES = [
   { id:"CRO",  nome:"Croácia",           sigla:"CRO",    qtd:20, esp:2,  flag:"🇭🇷" },
   { id:"GHA",  nome:"Gana",              sigla:"GHA",    qtd:20, esp:2,  flag:"🇬🇭" },
   { id:"PAN",  nome:"Panamá",            sigla:"PAN",    qtd:20, esp:2,  flag:"🇵🇦" },
-  // ── SEÇÃO FINAL ──────────────────────────────────────────────────────
-  { id:"CC",   nome:"CC (Especial)",     sigla:"CC",     qtd:14, esp:14, flag:"🥤" },
+  // ── PENÚLTIMA: FWC História ───────────────────────────────────────────
+  { id:"FWC3", nome:"FWC História",  sigla:"FWC-H", qtd:11, esp:0,  flag:"📜", inicio:9  },
+  // ── ÚLTIMA: CC ────────────────────────────────────────────────────────
+  { id:"CC",   nome:"CC (Especial)", sigla:"CC",    qtd:14, esp:14, flag:"🥤" },
 ];
 
 // Total: 5+4+11 + 48×20 + 14 = 20 + 960 + 14 = 994
@@ -550,7 +553,7 @@ function renderAlbum() {
           <button class="fig-btn${temBtn?" tem1":""}"
             style="border-color:${cb.borda};background:${cb.bg};color:${cb.txt};font-weight:${qtd>0?800:400};box-shadow:${qtd>=2?`0 0 8px ${cb.borda}40`:"none"}"
             onclick="addFig('${s.id}',${idx})">
-            ${esp?"★":""}${s.id==="FWC1" ? (idx===0?"00":idx) : idx+1}${qtd>0?`<div class="fig-qty">×${qtd}</div>`:""}
+            ${esp?"★":""}${s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1}${qtd>0?`<div class="fig-qty">×${qtd}</div>`:""}
           </button>
           ${temBtn?`<button class="fig-sub" style="border:1.5px solid ${cb.borda};color:${cb.borda}" onclick="subFig('${s.id}',${idx})">−</button>`:""}
         </div>`;
@@ -629,7 +632,14 @@ function renderTrocas() {
     }
   }
 
-  const numLabel = (s, idx) => s.id === "FWC1" ? (idx === 0 ? "00" : idx) : idx + 1;
+  const numLabel = (s, idx) => {
+    if (s.inicio !== undefined) {
+      // FWC: numeração contínua a partir do início definido
+      const n = s.inicio + idx;
+      return n === 0 ? "00" : n;
+    }
+    return idx + 1;
+  };
 
   const cardsHtml = pares.map(({ A, B, podeAdarB, podeBdarA }) => {
     const cA = corNome(A), cB = corNome(B);
@@ -682,7 +692,7 @@ function renderTrocas() {
           const outrosQueNaoTem = nomes.filter(o => o !== j && state[o][sel.id][idx] === 0).length;
           const qtdLivre = Math.max(0, (qtd-1) - outrosQueNaoTem);
           if (qtdLivre > 0) {
-            const numLabel = sel.id === "FWC1" ? (idx === 0 ? "00" : idx) : idx + 1;
+            const numLabel = sel.inicio !== undefined ? (sel.inicio+idx === 0 ? "00" : sel.inicio+idx) : idx + 1;
             livresLista.push({ sel, numLabel, qtdLivre });
           }
         }
