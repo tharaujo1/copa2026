@@ -397,9 +397,12 @@ function carregarDados() {
     const rawState  = localStorage.getItem("copa2026-state");
     if (rawConfig) {
       config = JSON.parse(rawConfig);
-      // garante compatibilidade
+      // Sempre atualiza as cores do código — nunca usa cores salvas
+      config.cores = PALETA.slice(0, config.nomes.length);
+      // salva config já com cores atualizadas
+      salvarConfig();
+      if (!state) state = {};
       config.nomes.forEach(j => {
-        if (!state) state = {};
         if (!state[j]) state[j] = {};
         SELECOES.forEach(sel => {
           if (!state[j][sel.id] || state[j][sel.id].length !== sel.qtd) {
@@ -408,7 +411,6 @@ function carregarDados() {
         });
       });
       if (rawState) state = JSON.parse(rawState);
-      // revalida após carregar state
       config.nomes.forEach(j => {
         if (!state[j]) state[j] = {};
         SELECOES.forEach(sel => {
