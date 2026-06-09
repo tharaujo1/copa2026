@@ -787,9 +787,9 @@ function renderTrocas() {
     const chipsLivres = livresLista.length > 0
       ? `<div class="troca-chips" style="margin-top:6px">
           ${[...livresLista].sort((a,b) => {
-            const iA = SELECOES.findIndex(s => s.id === a.sel.id);
-            const iB = SELECOES.findIndex(s => s.id === b.sel.id);
-            return iA !== iB ? iA - iB : a.numLabel - b.numLabel;
+            if (a.sel.sigla < b.sel.sigla) return -1;
+            if (a.sel.sigla > b.sel.sigla) return 1;
+            return a.numLabel - b.numLabel;
           }).map(f =>
             `<span class="chip" style="background:${c.accent}15;color:${c.accent};border-color:${c.accent}40">
               ${FLAGS[f.sel.id]} ${f.sel.sigla}-${f.numLabel}${f.qtdLivre>1?`<span style="color:#f59e0b"> ×${f.qtdLivre}</span>`:""}
