@@ -2,10 +2,13 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>🏆 Copa 2026 — Álbum de Figurinhas</title>
+<title>🏆 Copa 2026 — Álbum de Figurinhas v8</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body {
@@ -790,10 +793,21 @@ function renderTrocas() {
             if (a.sel.sigla < b.sel.sigla) return -1;
             if (a.sel.sigla > b.sel.sigla) return 1;
             return a.numLabel - b.numLabel;
-          }).map(f =>
-            `<span class="chip" style="background:${c.accent}15;color:${c.accent};border-color:${c.accent}40">
+          }).map(f => {
+            const idxReal = SELECOES.find(s => s.id === f.sel.id)
+              ? state[j][f.sel.id].findIndex((qtd, i) => {
+                  const label = f.sel.inicio !== undefined
+                    ? (f.sel.inicio+i === 0 ? "00" : f.sel.inicio+i)
+                    : i+1;
+                  return String(label) === String(f.numLabel) && qtd >= 2;
+                })
+              : -1;
+            return `<span class="chip" style="background:${c.accent}15;color:${c.accent};border-color:${c.accent}40;display:inline-flex;align-items:center;gap:4px">
               ${FLAGS[f.sel.id]} ${f.sel.sigla}-${f.numLabel}${f.qtdLivre>1?`<span style="color:#f59e0b"> ×${f.qtdLivre}</span>`:""}
-            </span>`).join("")}
+              ${idxReal >= 0 ? `<button onclick="subFigTroca('${j}','${f.sel.id}',${idxReal})"
+                style="background:#ef4444;border:none;color:#fff;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:900;cursor:pointer">−</button>` : ""}
+            </span>`;
+          }).join("")}
         </div>` : "";
 
     return `<div style="padding:10px 0;border-bottom:1px solid #1e293b">
@@ -996,6 +1010,15 @@ function importarDados() {
     alert("Erro ao importar. Verifique se o texto está correto.");
   }
 }
+function subFigTroca(nome, selId, idx) {
+  if (state[nome][selId][idx] > 0) {
+    state[nome][selId][idx]--;
+    salvarEstado();
+    renderConteudo();
+    renderJogadores();
+  }
+}
+
 function pedirReset()   { confirmandoReset = true;  renderConteudo(); }
 function cancelarReset(){ confirmandoReset = false; renderConteudo(); }
 
