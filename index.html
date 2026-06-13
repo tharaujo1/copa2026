@@ -401,7 +401,7 @@ function renderVisaoFamilia() {
         <div style="font-size:11px;color:#94a3b8;margin-bottom:4px">${FLAGS[s.id]} ${s.nome}</div>
         <div style="display:flex;flex-wrap:wrap;gap:4px">
           ${faltantes.map(f => `<span style="background:${f.qtdFalta>1?"#f59e0b20":"#1e293b"};color:${f.qtdFalta>1?"#f59e0b":"#64748b"};border:1px solid ${f.qtdFalta>1?"#f59e0b50":"#334155"};border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600">
-            ${f.numLabel}${f.qtdFalta>1?` ×${f.qtdFalta}`:""}
+            ${f.numLabel}${f.qtdFalta>1?`<span style="font-size:9px;font-weight:400;color:#f59e0b"> (×${f.qtdFalta})</span>`:""}
           </span>`).join("")}
         </div>
       </div>`;
@@ -1086,10 +1086,16 @@ function distribuirExtras(de, destinatarios, selId, idx, qtdExtra) {
   const precisam = destinatarios.filter(p => state[p][selId][idx] === 0);
   if (precisam.length === 0) return [];
   const ordenados = [...precisam].sort((a, b) => {
-    const temA = state[a][selId].filter(q => q >= 1).length;
-    const temB = state[b][selId].filter(q => q >= 1).length;
-    if (temA !== temB) return temA - temB; // menos figurinhas = prioridade
-    return a.localeCompare(b); // empate: alfabético
+    // 1. Menos figurinhas naquela seleção
+    const temSelA = state[a][selId].filter(q => q >= 1).length;
+    const temSelB = state[b][selId].filter(q => q >= 1).length;
+    if (temSelA !== temSelB) return temSelA - temSelB;
+    // 2. Empate: menos figurinhas no álbum total
+    const temTotalA = SELECOES.reduce((acc, s) => acc + state[a][s.id].filter(q => q >= 1).length, 0);
+    const temTotalB = SELECOES.reduce((acc, s) => acc + state[b][s.id].filter(q => q >= 1).length, 0);
+    if (temTotalA !== temTotalB) return temTotalA - temTotalB;
+    // 3. Empate no total: alfabético
+    return a.localeCompare(b);
   });
   const resultado = [];
   let sobraram = qtdExtra;
@@ -1152,23 +1158,32 @@ function renderTrocas() {
       const A = nomes[i], B = nomes[j];
       const podeAdarB = [], podeBdarA = [];
       SELECOES.forEach(s => {
+        const totalAlbum = (nome) => SELECOES.reduce((acc, sel) => acc + state[nome][sel.id].filter(q => q >= 1).length, 0);
+        const prioridade = (x, y, selId) => {
+          const tx = state[x][selId].filter(q => q >= 1).length;
+          const ty = state[y][selId].filter(q => q >= 1).length;
+          if (tx !== ty) return tx - ty;
+          const totalX = totalAlbum(x), totalY = totalAlbum(y);
+          if (totalX !== totalY) return totalX - totalY;
+          return x.localeCompare(y);
+        };
         state[A][s.id].forEach((qA, idx) => {
           const qB = state[B][s.id][idx];
           const extras = qA - 1;
           if (extras <= 0 || qB !== 0) return;
           const outrosQueNaoTem = nomes.filter(o => o !== A && o !== B && state[o][s.id][idx] === 0);
+          const outrosOrdenados = [...outrosQueNaoTem].sort((x, y) => prioridade(x, y, s.id));
           const temNaSelB = state[B][s.id].filter(q => q >= 1).length;
-          const outrosOrdenados = [...outrosQueNaoTem].sort((x, y) => {
-            const tx = state[x][s.id].filter(q => q >= 1).length;
-            const ty = state[y][s.id].filter(q => q >= 1).length;
-            return tx !== ty ? tx - ty : x.localeCompare(y);
-          });
+          const totalB = totalAlbum(B);
           let extrasUsadosAntes = 0;
           for (const outro of outrosOrdenados) {
             const temOutro = state[outro][s.id].filter(q => q >= 1).length;
-            if (temOutro < temNaSelB || (temOutro === temNaSelB && outro.localeCompare(B) < 0)) {
-              extrasUsadosAntes++;
-            }
+            const totalOutro = totalAlbum(outro);
+            const outroPrioritario =
+              temOutro < temNaSelB ||
+              (temOutro === temNaSelB && totalOutro < totalB) ||
+              (temOutro === temNaSelB && totalOutro === totalB && outro.localeCompare(B) < 0);
+            if (outroPrioritario) extrasUsadosAntes++;
           }
           const extrasParaB = Math.max(0, extras - extrasUsadosAntes);
           if (extrasParaB > 0) podeAdarB.push({ s, idx, qtd: extrasParaB });
@@ -1178,18 +1193,18 @@ function renderTrocas() {
           const extras = qB - 1;
           if (extras <= 0 || qA !== 0) return;
           const outrosQueNaoTem = nomes.filter(o => o !== B && o !== A && state[o][s.id][idx] === 0);
+          const outrosOrdenados = [...outrosQueNaoTem].sort((x, y) => prioridade(x, y, s.id));
           const temNaSelA = state[A][s.id].filter(q => q >= 1).length;
-          const outrosOrdenados = [...outrosQueNaoTem].sort((x, y) => {
-            const tx = state[x][s.id].filter(q => q >= 1).length;
-            const ty = state[y][s.id].filter(q => q >= 1).length;
-            return tx !== ty ? tx - ty : x.localeCompare(y);
-          });
+          const totalA = totalAlbum(A);
           let extrasUsadosAntes = 0;
           for (const outro of outrosOrdenados) {
             const temOutro = state[outro][s.id].filter(q => q >= 1).length;
-            if (temOutro < temNaSelA || (temOutro === temNaSelA && outro.localeCompare(A) < 0)) {
-              extrasUsadosAntes++;
-            }
+            const totalOutro = totalAlbum(outro);
+            const outroPrioritario =
+              temOutro < temNaSelA ||
+              (temOutro === temNaSelA && totalOutro < totalA) ||
+              (temOutro === temNaSelA && totalOutro === totalA && outro.localeCompare(A) < 0);
+            if (outroPrioritario) extrasUsadosAntes++;
           }
           const extrasParaA = Math.max(0, extras - extrasUsadosAntes);
           if (extrasParaA > 0) podeBdarA.push({ s, idx, qtd: extrasParaA });
