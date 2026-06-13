@@ -590,16 +590,16 @@ function faltamNaSel(nome, selId) {
 }
 
 // Priorização por seleção:
-// 1. Quem tem menos faltando naquela seleção (mais próximo de completar)
+// 1. Quem tem MENOS figurinhas naquela seleção tem prioridade (mais precisa = mais justo)
 // 2. Empate: ordem alfabética pelo nome
 function distribuirExtras(de, destinatarios, selId, idx, qtdExtra) {
   const precisam = destinatarios.filter(p => state[p][selId][idx] === 0);
   if (precisam.length === 0) return [];
   const ordenados = [...precisam].sort((a, b) => {
-    const faltA = faltamNaSel(a, selId);
-    const faltB = faltamNaSel(b, selId);
-    if (faltA !== faltB) return faltA - faltB; // menos faltando = mais próximo = prioridade
-    return a.localeCompare(b); // empate: alfabético pelo nome
+    const temA = state[a][selId].filter(q => q >= 1).length;
+    const temB = state[b][selId].filter(q => q >= 1).length;
+    if (temA !== temB) return temA - temB; // menos figurinhas = prioridade
+    return a.localeCompare(b); // empate: alfabético
   });
   const resultado = [];
   let sobraram = qtdExtra;
