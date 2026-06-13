@@ -569,14 +569,9 @@ function fecharModal() {
 
 function confirmarFigurinhaSessao(selId, idx, para, numLabel, selNome, flag) {
   fecharModal();
-  // Evita duplicata na sessão
-  const jaExiste = sessaoTroca.some(i => i.selId === selId && i.idx === idx && i.para === para);
-  if (!jaExiste) {
-    sessaoTroca.push({ selId, idx, para, numLabel, selNome, flag });
-    salvarSessao();
-  }
+  sessaoTroca.push({ selId, idx, para, numLabel, selNome, flag });
+  salvarSessao();
   render();
-  // Toast
   const toast = document.getElementById("toast");
   toast.textContent = `✅ ${flag} ${selNome}-${numLabel} → ${para}`;
   toast.classList.add("show");
@@ -1155,7 +1150,7 @@ function renderAlbum() {
           <button class="fig-btn${temBtn?" tem1":""}"
             style="${estiloFaltam}border-color:${cb.borda};background:${cb.bg};color:${cb.txt};font-weight:${qtd>0?800:400};box-shadow:${qtd>=2?`0 0 8px ${cb.borda}40`:"none"}"
             onclick="${onclickAdd}">
-            ${esp?"★":""}${numLabel}${qtd>0?`<div class="fig-qty">×${qtd}</div>`:modoFaltam?`<div style='font-size:8px;margin-top:1px;color:#22c55e'>+1</div>`:""}
+            ${esp?"★":""}${numLabel}${qtd>0?`<div class="fig-qty">×${qtd}</div>`:""}
           </button>
           ${temBtn?`<button class="fig-sub" style="border:1.5px solid ${cb.borda};color:${cb.borda}" onclick="subFig('${s.id}',${idx})">−</button>`:""}
         </div>`;
