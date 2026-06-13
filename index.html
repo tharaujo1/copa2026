@@ -230,6 +230,10 @@
   <div id="header">
     <h1>🏆 <span style="color:#f59e0b">Copa 2026</span></h1>
     <p id="header-sub">Panini · 994 figurinhas · 52 seções</p>
+    <button onclick="forcarAtualizacao()"
+      style="margin-top:6px;background:transparent;border:1px solid #334155;color:#64748b;padding:3px 10px;border-radius:20px;font-size:10px;cursor:pointer">
+      🔄 Atualizar app
+    </button>
   </div>
   <div id="jogadores"></div>
   <div id="abas"></div>
@@ -1028,6 +1032,10 @@ function subFigTroca(nome, selId, idx) {
     renderConteudo();
     renderJogadores();
   }
+}
+
+function forcarAtualizacao() {
+  window.location.reload(true);
 }
 
 function pedirReset()   { confirmandoReset = true;  renderConteudo(); }
