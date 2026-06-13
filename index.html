@@ -455,6 +455,9 @@ function corBotao(qtd, accent) {
   return { bg:"#f9731625", borda:"#f97316", txt:"#f97316" };
 }
 
+let mostrarTenho = true;
+let mostrarFaltam = true;
+
 // ─── INICIAR APP ──────────────────────────────────────────────────────────────
 function iniciarApp() {
   document.getElementById("setup-screen").style.display = "none";
@@ -524,22 +527,202 @@ function renderConteudo() {
 }
 
 // ── ÁLBUM ────────────────────────────────────────────────────────────────────
+function toggleTenho() { mostrarTenho = !mostrarTenho; renderConteudo(); }
+function toggleFaltam() { mostrarFaltam = !mostrarFaltam; renderConteudo(); }
+
+function exportarFaltantesTexto() {
+  const nome = config.nomes[jogadorAtivo];
+  let texto = `📋 Figurinhas faltando — ${nome}\n`;
+  texto += `Copa 2026 Panini\n\n`;
+  SELECOES.forEach(s => {
+    const arr = state[nome][s.id];
+    const faltantes = arr.map((qtd, idx) => {
+      if (qtd === 0) {
+        const n = s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
+        return n;
+      }
+      return null;
+    }).filter(n => n !== null);
+    if (faltantes.length > 0) {
+      texto += `${FLAGS[s.id]} ${s.nome}: ${faltantes.join(", ")}\n`;
+    }
+  });
+  texto += `\nGerado em ${new Date().toLocaleDateString("pt-BR")}`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texto).then(() => {
+      alert("✅ Copiado! Cole no WhatsApp.");
+    }).catch(() => { prompt("Copie o texto:", texto); });
+  } else {
+    prompt("Copie o texto:", texto);
+  }
+}
+
+function exportarConsolidado() {
+  const nomes = config.nomes;
+  let texto = `📋 Figurinhas faltando — Família\n`;
+  texto += `Copa 2026 Panini\n\n`;
+  SELECOES.forEach(s => {
+    // Figurinhas que pelo menos 1 filho precisa
+    const faltantes = [];
+    const arr0 = state[nomes[0]][s.id];
+    arr0.forEach((_, idx) => {
+      const precisam = nomes.filter(n => state[n][s.id][idx] === 0);
+      if (precisam.length > 0) {
+        const numLabel = s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
+        // Mostra quem precisa se não for todos
+        if (precisam.length === nomes.length) {
+          faltantes.push(`${numLabel}`);
+        } else {
+          const iniciais = precisam.map(n => n[0]).join("");
+          faltantes.push(`${numLabel}(${iniciais})`);
+        }
+      }
+    });
+    if (faltantes.length > 0) {
+      texto += `${FLAGS[s.id]} ${s.nome}: ${faltantes.join(", ")}\n`;
+    }
+  });
+  texto += `\n👥 ${nomes.join(", ")}`;
+  texto += `\nGerado em ${new Date().toLocaleDateString("pt-BR")}`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texto).then(() => {
+      alert("✅ Copiado! Cole no WhatsApp.\n\nNúmeros sem parênteses = todos precisam\nNúmeros com iniciais = só aquele(s) precisa(m)");
+    }).catch(() => { prompt("Copie o texto:", texto); });
+  } else {
+    prompt("Copie o texto:", texto);
+  }
+}
+
+function exportarFaltantesImagem() {
+  const nome = config.nomes[jogadorAtivo];
+  const c = corDoJogador(jogadorAtivo);
+
+  // Monta linhas com bandeira + nome + números
+  const linhasSecoes = [];
+  SELECOES.forEach(s => {
+    const arr = state[nome][s.id];
+    const faltantes = arr.map((qtd, idx) => {
+      if (qtd === 0) {
+        return s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
+      }
+      return null;
+    }).filter(n => n !== null);
+    if (faltantes.length > 0) {
+      linhasSecoes.push({ flag: FLAGS[s.id], nome: s.nome, nums: faltantes.join(", ") });
+    }
+  });
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  const largura = 900;
+  const paddingH = 40;
+  const alturaHeader = 100;
+  const alturaLinha = 38;
+  const paddingV = 30;
+
+  canvas.width = largura;
+  canvas.height = alturaHeader + linhasSecoes.length * alturaLinha + paddingV * 2;
+
+  // Fundo
+  ctx.fillStyle = "#0f1923";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Barra colorida topo
+  ctx.fillStyle = c.accent;
+  ctx.fillRect(0, 0, canvas.width, 6);
+
+  // Título
+  ctx.font = "bold 30px Arial";
+  ctx.fillStyle = c.accent;
+  ctx.fillText(`📋 Faltantes — ${nome}`, paddingH, 50);
+
+  ctx.font = "20px Arial";
+  ctx.fillStyle = "#f59e0b";
+  ctx.fillText(`Copa 2026 Panini · ${new Date().toLocaleDateString("pt-BR")}`, paddingH, 82);
+
+  // Linhas de seções
+  linhasSecoes.forEach((linha, i) => {
+    const y = alturaHeader + paddingV + i * alturaLinha;
+    const par = i % 2 === 0;
+    if (par) {
+      ctx.fillStyle = "#ffffff08";
+      ctx.fillRect(0, y - 26, canvas.width, alturaLinha);
+    }
+    ctx.font = "22px Arial";
+    ctx.fillStyle = "#e2e8f0";
+    ctx.fillText(`${linha.flag} ${linha.nome}:`, paddingH, y);
+
+    ctx.font = "20px Arial";
+    ctx.fillStyle = "#94a3b8";
+    // Calcula posição após o nome
+    const nomeWidth = ctx.measureText(`${linha.flag} ${linha.nome}: `).width;
+    ctx.fillStyle = "#cbd5e1";
+    ctx.fillText(linha.nums, paddingH + nomeWidth + 4, y);
+  });
+
+  // Rodapé
+  ctx.font = "16px Arial";
+  ctx.fillStyle = "#334155";
+  ctx.fillText("Copa 2026 — Família Gonçalves", paddingH, canvas.height - 10);
+
+  const link = document.createElement("a");
+  link.download = `faltantes-${nome.toLowerCase()}.png`;
+  link.href = canvas.toDataURL();
+  link.click();
+  alert("✅ Imagem salva! Compartilhe no WhatsApp.");
+}
+
 function renderAlbum() {
   const nomeAtivo = config.nomes[jogadorAtivo];
   const c = corDoJogador(jogadorAtivo);
+
+  // Toggles
+  const toggles = `<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+    <button onclick="toggleTenho()" style="
+      padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;
+      border:2px solid ${mostrarTenho ? c.accent : "#334155"};
+      background:${mostrarTenho ? c.accent+"25" : "transparent"};
+      color:${mostrarTenho ? c.accent : "#64748b"}">
+      ✓ Tenho
+    </button>
+    <button onclick="toggleFaltam()" style="
+      padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;
+      border:2px solid ${mostrarFaltam ? "#ef4444" : "#334155"};
+      background:${mostrarFaltam ? "#ef444425" : "transparent"};
+      color:${mostrarFaltam ? "#ef4444" : "#64748b"}">
+      ✗ Faltam
+    </button>
+    ${mostrarFaltam && !mostrarTenho ? `
+      <button onclick="exportarFaltantesTexto()" style="
+        padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;
+        border:1px solid #1d4ed8;background:#1e40af25;color:#3b82f6">
+        📋 WhatsApp
+      </button>
+      <button onclick="exportarFaltantesImagem()" style="
+        padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;
+        border:1px solid #334155;background:#1e293b;color:#94a3b8">
+        🖼️ Imagem
+      </button>
+      <button onclick="exportarConsolidado()" style="
+        padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;
+        border:1px solid #a855f7;background:#a855f725;color:#a855f7">
+        👥 Família
+      </button>` : ""}
+  </div>`;
+
   const legendaItens = [
     { bg:"#1e293b", borda:"#334155", label:"Falta" },
     { bg:c.accent+"25", borda:c.accent, label:"×1" },
     { bg:"#f59e0b25", borda:"#f59e0b", label:"×2" },
     { bg:"#f9731625", borda:"#f97316", label:"×3+" },
   ];
-  const legenda = `<div class="legenda">
+  const legenda = (mostrarTenho && mostrarFaltam) ? `<div class="legenda">
     ${legendaItens.map(l=>`<div class="legenda-item">
       <div class="legenda-box" style="background:${l.bg};border:1.5px solid ${l.borda}"></div>
       <span style="color:#94a3b8">${l.label}</span>
     </div>`).join("")}
     <div class="legenda-hint">toque <b style="color:#94a3b8">+</b> · botão <b style="color:#94a3b8">−</b></div>
-  </div>`;
+  </div>` : "";
 
   const sels = SELECOES.map(s => {
     const arr = state[nomeAtivo][s.id];
@@ -548,21 +731,33 @@ function renderAlbum() {
     const maxQ = Math.max(...arr);
     const pct = Math.round(tem / s.qtd * 100);
     const completa = tem === s.qtd;
-    const aberta = selecaoAberta === s.id;
+    const aberta = selecaoAberta === s.id || (!mostrarTenho && mostrarFaltam);
     const extrasLabel = extras > 0
       ? `<span style="color:${maxQ>=3?"#f97316":"#f59e0b"}"> · ${extras} extra${extras>1?"s":""}</span>` : "";
 
+    // Filtrar figurinhas por toggle
+    const figsFiltradas = arr.map((qtd, idx) => ({ qtd, idx })).filter(({ qtd }) => {
+      if (mostrarTenho && mostrarFaltam) return true;
+      if (mostrarTenho && !mostrarFaltam) return qtd >= 1;
+      if (!mostrarTenho && mostrarFaltam) return qtd === 0;
+      return true;
+    });
+
+    // Se não há figurinhas para mostrar nesta seleção, pula
+    if (figsFiltradas.length === 0) return "";
+
     let grid = "";
     if (aberta) {
-      grid = `<div class="fig-grid">` + arr.map((qtd, idx) => {
+      grid = `<div class="fig-grid">` + figsFiltradas.map(({ qtd, idx }) => {
         const esp = idx < s.esp;
         const cb = corBotao(qtd, c.accent);
         const temBtn = qtd > 0;
+        const numLabel = s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
         return `<div class="fig-wrap">
           <button class="fig-btn${temBtn?" tem1":""}"
             style="border-color:${cb.borda};background:${cb.bg};color:${cb.txt};font-weight:${qtd>0?800:400};box-shadow:${qtd>=2?`0 0 8px ${cb.borda}40`:"none"}"
             onclick="addFig('${s.id}',${idx})">
-            ${esp?"★":""}${s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1}${qtd>0?`<div class="fig-qty">×${qtd}</div>`:""}
+            ${esp?"★":""}${numLabel}${qtd>0?`<div class="fig-qty">×${qtd}</div>`:""}
           </button>
           ${temBtn?`<button class="fig-sub" style="border:1.5px solid ${cb.borda};color:${cb.borda}" onclick="subFig('${s.id}',${idx})">−</button>`:""}
         </div>`;
@@ -585,7 +780,7 @@ function renderAlbum() {
     </div>`;
   }).join("");
 
-  return legenda + sels;
+  return toggles + legenda + sels;
 }
 
 // ── TROCAS ───────────────────────────────────────────────────────────────────
