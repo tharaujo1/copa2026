@@ -454,18 +454,23 @@ function renderVisaoFamilia() {
     const faltantes = [];
     state[nomes[0]][s.id].forEach((_, idx) => {
       const qtdFalta = nomes.filter(n => state[n][s.id][idx] === 0).length;
-      if (qtdFalta > 0) {
+      // Exclui figurinhas já na sessão para todos que precisam
+      const nasSessaoCount = sessaoTroca.filter(i => i.selId === s.id && i.idx === idx).length;
+      const qtdRestante = qtdFalta - nasSessaoCount;
+      if (qtdRestante > 0) {
         const numLabel = s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
-        faltantes.push({ numLabel, qtdFalta });
+        faltantes.push({ numLabel, qtdFalta: qtdRestante, idx, selId: s.id, selNome: s.nome, flag: FLAGS[s.id] });
       }
     });
     if (faltantes.length > 0) {
       html += `<div style="padding:6px 0;border-bottom:1px solid #1e293b">
         <div style="font-size:11px;color:#94a3b8;margin-bottom:4px">${FLAGS[s.id]} ${s.nome}</div>
         <div style="display:flex;flex-wrap:wrap;gap:4px">
-          ${faltantes.map(f => `<span style="background:${f.qtdFalta>1?"#f59e0b20":"#1e293b"};color:${f.qtdFalta>1?"#f59e0b":"#64748b"};border:1px solid ${f.qtdFalta>1?"#f59e0b50":"#334155"};border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600">
-            ${f.numLabel}${f.qtdFalta>1?`<span style="font-size:9px;font-weight:400;color:#f59e0b"> (×${f.qtdFalta})</span>`:""}
-          </span>`).join("")}
+          ${faltantes.map(f => `
+            <button onclick="abrirModalFigurinha('${f.selId}',${f.idx},'${f.numLabel}','${f.selNome}','${f.flag}')"
+              style="background:${f.qtdFalta>1?"#f59e0b20":"#1e293b"};color:${f.qtdFalta>1?"#f59e0b":"#94a3b8"};border:1px solid ${f.qtdFalta>1?"#f59e0b50":"#334155"};border-radius:4px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer">
+              ${f.numLabel}${f.qtdFalta>1?`<span style="font-size:9px;font-weight:400"> (×${f.qtdFalta})</span>`:""}
+            </button>`).join("")}
         </div>
       </div>`;
     }
@@ -643,10 +648,20 @@ function exportarResumoSessao() {
 function renderSessao() {
   const nomes = config.nomes;
   if (sessaoTroca.length === 0) {
-    return `<div style="text-align:center;padding:40px 20px;color:#475569">
+    return `<div style="text-align:center;padding:30px 20px">
       <div style="font-size:40px;margin-bottom:12px">📦</div>
-      <div style="font-size:15px;font-weight:700;color:#64748b">Nenhuma figurinha na sessão</div>
-      <div style="font-size:12px;margin-top:8px">Na aba Álbum, ative só "Faltam" e toque nas figurinhas que conseguiu</div>
+      <div style="font-size:15px;font-weight:700;color:#64748b;margin-bottom:16px">Nenhuma figurinha na sessão</div>
+      <div style="background:#1e293b;border-radius:12px;padding:14px;text-align:left;border:1px solid #334155">
+        <div style="font-size:12px;font-weight:700;color:#f59e0b;margin-bottom:8px">📋 Como usar a sessão</div>
+        <div style="font-size:12px;color:#94a3b8;line-height:1.6">
+          Use quando estiver numa <strong style="color:#e2e8f0">banca ou encontro de troca</strong> com figurinhas na mão.<br><br>
+          1️⃣ Selecione o filho no topo<br>
+          2️⃣ Vá na aba <strong style="color:#e2e8f0">Álbum</strong> e ative só <strong style="color:#ef4444">✗ Faltam</strong><br>
+          3️⃣ Toque nas figurinhas que conseguiu<br>
+          4️⃣ O app registra automaticamente <strong style="color:#e2e8f0">para qual filho vai</strong><br>
+          5️⃣ Volte aqui, veja o resumo por filho, separe os bolinhos e confirme
+        </div>
+      </div>
     </div>`;
   }
 
@@ -1102,9 +1117,10 @@ function renderAlbum() {
       ? `<span style="color:${maxQ>=3?"#f97316":"#f59e0b"}"> · ${extras} extra${extras>1?"s":""}</span>` : "";
 
     // Figurinhas já confirmadas na sessão para este filho
+    const nomeFilho = config.nomes[jogadorAtivo];
     const nasSessao = new Set(
       sessaoTroca
-        .filter(item => item.selId === s.id && item.para === nomeAtivo)
+        .filter(item => item.selId === s.id && item.para === nomeFilho)
         .map(item => item.idx)
     );
 
@@ -1127,19 +1143,19 @@ function renderAlbum() {
         const cb = corBotao(qtd, c.accent);
         const temBtn = qtd > 0;
         const numLabel = s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
-        // No modo só Faltam e figurinha faltante: toque abre modal de sessão
+        // No modo só Faltam e figurinha faltante: marca direto no álbum do filho ativo
         const onclickAdd = (modoFaltam && qtd === 0)
-          ? `abrirModalFigurinha('${s.id}',${idx},'${numLabel}','${s.nome}','${FLAGS[s.id]||""}')`
+          ? `addFig('${s.id}',${idx})`
           : `addFig('${s.id}',${idx})`;
         // Estilo especial no modo faltam: destaca que é clicável
         const estiloFaltam = (modoFaltam && qtd === 0)
-          ? `border-color:#f59e0b;background:#f59e0b10;color:#f59e0b;`
+          ? `border-color:#22c55e;background:#22c55e15;color:#22c55e;`
           : "";
         return `<div class="fig-wrap">
           <button class="fig-btn${temBtn?" tem1":""}"
             style="${estiloFaltam}border-color:${cb.borda};background:${cb.bg};color:${cb.txt};font-weight:${qtd>0?800:400};box-shadow:${qtd>=2?`0 0 8px ${cb.borda}40`:"none"}"
             onclick="${onclickAdd}">
-            ${esp?"★":""}${numLabel}${qtd>0?`<div class="fig-qty">×${qtd}</div>`:modoFaltam?"<div style='font-size:8px;margin-top:1px'>toque</div>":""}
+            ${esp?"★":""}${numLabel}${qtd>0?`<div class="fig-qty">×${qtd}</div>`:modoFaltam?`<div style='font-size:8px;margin-top:1px;color:#22c55e'>+1</div>`:""}
           </button>
           ${temBtn?`<button class="fig-sub" style="border:1.5px solid ${cb.borda};color:${cb.borda}" onclick="subFig('${s.id}',${idx})">−</button>`:""}
         </div>`;
