@@ -523,16 +523,26 @@ function sugerirDestinatario(selId, idx) {
 // Abre modal para confirmar para qual filho vai a figurinha
 function abrirModalFigurinha(selId, idx, numLabel, selNome, flag) {
   const nomes = config.nomes;
+  const nomeAtivo = config.nomes[jogadorAtivo];
   const precisam = nomes.filter(n => state[n][selId][idx] === 0);
-  if (precisam.length === 0) return; // ninguém precisa
+  if (precisam.length === 0) return;
 
+  // Se está na visão individual (filho ativo precisa), confirma direto para ele
+  if (precisam.includes(nomeAtivo)) {
+    confirmarFigurinhaSessao(selId, idx, nomeAtivo, numLabel, selNome, flag);
+    return;
+  }
+
+  // Visão consolidada família: mais de 1 precisa e nenhum é o ativo
   const sugerido = sugerirDestinatario(selId, idx);
+  if (precisam.length === 1) {
+    confirmarFigurinhaSessao(selId, idx, precisam[0], numLabel, selNome, flag);
+    return;
+  }
 
   document.getElementById("modal-titulo").textContent = `${flag} ${selNome}-${numLabel}`;
   document.getElementById("modal-sub").textContent =
-    precisam.length === 1
-      ? `✅ Vai direto para ${precisam[0]}!`
-      : `Sugestão: ${sugerido} (menos figurinhas desta seleção)`;
+    `Sugestão: ${sugerido} (menos figurinhas desta seleção)`;
 
   const btns = document.getElementById("modal-btns");
   btns.innerHTML = precisam.map(nome => {
@@ -545,12 +555,6 @@ function abrirModalFigurinha(selId, idx, numLabel, selNome, flag) {
     </button>`;
   }).join("");
 
-  // Se só 1 precisa, confirma direto sem modal
-  if (precisam.length === 1) {
-    confirmarFigurinhaSessao(selId, idx, precisam[0], numLabel, selNome, flag);
-    return;
-  }
-
   document.getElementById("modal-overlay").classList.add("show");
 }
 
@@ -560,9 +564,13 @@ function fecharModal() {
 
 function confirmarFigurinhaSessao(selId, idx, para, numLabel, selNome, flag) {
   fecharModal();
-  sessaoTroca.push({ selId, idx, para, numLabel, selNome, flag });
-  salvarSessao();
-  renderConteudo();
+  // Evita duplicata na sessão
+  const jaExiste = sessaoTroca.some(i => i.selId === selId && i.idx === idx && i.para === para);
+  if (!jaExiste) {
+    sessaoTroca.push({ selId, idx, para, numLabel, selNome, flag });
+    salvarSessao();
+  }
+  render();
   // Toast
   const toast = document.getElementById("toast");
   toast.textContent = `✅ ${flag} ${selNome}-${numLabel} → ${para}`;
@@ -1093,11 +1101,18 @@ function renderAlbum() {
     const extrasLabel = extras > 0
       ? `<span style="color:${maxQ>=3?"#f97316":"#f59e0b"}"> · ${extras} extra${extras>1?"s":""}</span>` : "";
 
-    // Filtrar figurinhas por toggle
-    const figsFiltradas = arr.map((qtd, idx) => ({ qtd, idx })).filter(({ qtd }) => {
+    // Figurinhas já confirmadas na sessão para este filho
+    const nasSessao = new Set(
+      sessaoTroca
+        .filter(item => item.selId === s.id && item.para === nomeAtivo)
+        .map(item => item.idx)
+    );
+
+    // Filtrar figurinhas por toggle — no modo faltam, esconde as que já estão na sessão
+    const figsFiltradas = arr.map((qtd, idx) => ({ qtd, idx })).filter(({ qtd, idx }) => {
       if (mostrarTenho && mostrarFaltam) return true;
       if (mostrarTenho && !mostrarFaltam) return qtd >= 1;
-      if (!mostrarTenho && mostrarFaltam) return qtd === 0;
+      if (!mostrarTenho && mostrarFaltam) return qtd === 0 && !nasSessao.has(idx);
       return true;
     });
 
