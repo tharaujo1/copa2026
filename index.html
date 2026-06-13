@@ -377,8 +377,71 @@ let qtdSel = 3;
 let mostrarTenho = true;
 let mostrarFaltam = true;
 let visaoFamilia = false;
+let submenuAberto = null;
+
+function toggleSubmenu(qual) {
+  submenuAberto = submenuAberto === qual ? null : qual;
+  renderConteudo();
+}
 
 function toggleVisaoFamilia() { visaoFamilia = !visaoFamilia; renderConteudo(); }
+
+function exportarFamiliaImagem() {
+  const nomes = config.nomes;
+  const linhasSecoes = [];
+  SELECOES.forEach(s => {
+    const faltantes = [];
+    state[nomes[0]][s.id].forEach((_, idx) => {
+      const qtdFalta = nomes.filter(n => state[n][s.id][idx] === 0).length;
+      if (qtdFalta > 0) {
+        const numLabel = s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
+        faltantes.push(qtdFalta > 1 ? `${numLabel}(×${qtdFalta})` : `${numLabel}`);
+      }
+    });
+    if (faltantes.length > 0) {
+      linhasSecoes.push({ flag: FLAGS[s.id], nome: s.nome, nums: faltantes.join(", ") });
+    }
+  });
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  const largura = 900;
+  const paddingH = 40;
+  const alturaHeader = 100;
+  const alturaLinha = 38;
+  const paddingV = 30;
+  canvas.width = largura;
+  canvas.height = alturaHeader + linhasSecoes.length * alturaLinha + paddingV * 2;
+
+  ctx.fillStyle = "#0f1923";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#a855f7";
+  ctx.fillRect(0, 0, canvas.width, 6);
+
+  ctx.font = "bold 28px Arial";
+  ctx.fillStyle = "#a855f7";
+  ctx.fillText("📋 Faltantes — Família Gonçalves", paddingH, 48);
+  ctx.font = "20px Arial";
+  ctx.fillStyle = "#f59e0b";
+  ctx.fillText(`Copa 2026 Panini · ${new Date().toLocaleDateString("pt-BR")}`, paddingH, 80);
+
+  linhasSecoes.forEach((linha, i) => {
+    const y = alturaHeader + paddingV + i * alturaLinha;
+    if (i % 2 === 0) { ctx.fillStyle = "#ffffff08"; ctx.fillRect(0, y-26, canvas.width, alturaLinha); }
+    ctx.font = "20px Arial";
+    ctx.fillStyle = "#e2e8f0";
+    const prefixo = `${linha.flag} ${linha.nome}: `;
+    ctx.fillText(prefixo, paddingH, y);
+    ctx.fillStyle = "#94a3b8";
+    ctx.fillText(linha.nums, paddingH + ctx.measureText(prefixo).width, y);
+  });
+
+  const link = document.createElement("a");
+  link.download = `faltantes-familia.png`;
+  link.href = canvas.toDataURL();
+  link.click();
+  alert("✅ Imagem salva!");
+}
 
 function renderVisaoFamilia() {
   const nomes = config.nomes;
@@ -443,11 +506,17 @@ function sugerirDestinatario(selId, idx) {
   const nomes = config.nomes;
   const precisam = nomes.filter(n => state[n][selId][idx] === 0);
   if (precisam.length === 0) return null;
-  // Ordena: menos figurinhas naquela seleção primeiro; empate: alfabético
+  const totalAlbum = (nome) => SELECOES.reduce((acc, s) => acc + state[nome][s.id].filter(q => q >= 1).length, 0);
   return [...precisam].sort((a, b) => {
+    // 1. Menos figurinhas naquela seleção
     const ta = state[a][selId].filter(q => q >= 1).length;
     const tb = state[b][selId].filter(q => q >= 1).length;
-    return ta !== tb ? ta - tb : a.localeCompare(b);
+    if (ta !== tb) return ta - tb;
+    // 2. Menos figurinhas no álbum total
+    const totalA = totalAlbum(a), totalB = totalAlbum(b);
+    if (totalA !== totalB) return totalA - totalB;
+    // 3. Alfabético
+    return a.localeCompare(b);
   })[0];
 }
 
@@ -814,8 +883,8 @@ function renderConteudo() {
 }
 
 // ── ÁLBUM ────────────────────────────────────────────────────────────────────
-function toggleTenho() { mostrarTenho = !mostrarTenho; renderConteudo(); }
-function toggleFaltam() { mostrarFaltam = !mostrarFaltam; renderConteudo(); }
+function toggleTenho() { mostrarTenho = !mostrarTenho; submenuAberto = null; renderConteudo(); }
+function toggleFaltam() { mostrarFaltam = !mostrarFaltam; submenuAberto = null; renderConteudo(); }
 
 function exportarFaltantesTexto() {
   const nome = config.nomes[jogadorAtivo];
@@ -851,10 +920,10 @@ function exportarConsolidado() {
   SELECOES.forEach(s => {
     const faltantes = [];
     state[nomes[0]][s.id].forEach((_, idx) => {
-      const algumPrecisa = nomes.some(n => state[n][s.id][idx] === 0);
-      if (algumPrecisa) {
+      const qtdFalta = nomes.filter(n => state[n][s.id][idx] === 0).length;
+      if (qtdFalta > 0) {
         const numLabel = s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
-        faltantes.push(numLabel);
+        faltantes.push(qtdFalta > 1 ? `${numLabel}(×${qtdFalta})` : `${numLabel}`);
       }
     });
     if (faltantes.length > 0) {
@@ -971,21 +1040,31 @@ function renderAlbum() {
       ✗ Faltam
     </button>
     ${mostrarFaltam && !mostrarTenho ? `
-      <button onclick="exportarFaltantesTexto()" style="
+      <button onclick="toggleSubmenu('individual')" style="
         padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;
-        border:1px solid #1d4ed8;background:#1e40af25;color:#3b82f6">
-        📋 WhatsApp
+        border:1px solid ${submenuAberto==='individual'?'#3b82f6':'#334155'};
+        background:${submenuAberto==='individual'?'#3b82f625':'transparent'};
+        color:${submenuAberto==='individual'?'#3b82f6':'#64748b'}">
+        👤 Individual ${submenuAberto==='individual'?'▲':'▼'}
       </button>
-      <button onclick="exportarFaltantesImagem()" style="
+      <button onclick="toggleSubmenu('familia')" style="
         padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;
-        border:1px solid #334155;background:#1e293b;color:#94a3b8">
-        🖼️ Imagem
+        border:1px solid ${submenuAberto==='familia'?'#a855f7':'#334155'};
+        background:${submenuAberto==='familia'?'#a855f725':'transparent'};
+        color:${submenuAberto==='familia'?'#a855f7':'#64748b'}">
+        👥 Família ${submenuAberto==='familia'?'▲':'▼'}
       </button>
-      <button onclick="toggleVisaoFamilia()" style="
-        padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;
-        border:1px solid ${visaoFamilia?"#a855f7":"#334155"};background:${visaoFamilia?"#a855f725":"transparent"};color:${visaoFamilia?"#a855f7":"#64748b"}">
-        👥 Família
-      </button>` : ""}
+      ${submenuAberto==='individual'?`
+        <div style="width:100%;display:flex;gap:6px;margin-top:4px">
+          <button onclick="exportarFaltantesTexto()" style="flex:1;padding:7px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #1d4ed8;background:#1e40af25;color:#3b82f6">📋 Texto</button>
+          <button onclick="exportarFaltantesImagem()" style="flex:1;padding:7px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#94a3b8">🖼️ Imagem</button>
+        </div>` : ""}
+      ${submenuAberto==='familia'?`
+        <div style="width:100%;display:flex;gap:6px;margin-top:4px">
+          <button onclick="exportarConsolidado()" style="flex:1;padding:7px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #a855f7;background:#a855f725;color:#a855f7">📋 Texto</button>
+          <button onclick="exportarFamiliaImagem()" style="flex:1;padding:7px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #7c3aed;background:#7c3aed25;color:#a855f7">🖼️ Imagem</button>
+          <button onclick="toggleVisaoFamilia()" style="flex:1;padding:7px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${visaoFamilia?'#a855f7':'#334155'};background:${visaoFamilia?'#a855f725':'transparent'};color:${visaoFamilia?'#a855f7':'#64748b'}">👁️ Tela</button>
+        </div>` : ""}` : ""}
   </div>
   ${mostrarFaltam && !mostrarTenho && visaoFamilia ? renderVisaoFamilia() : ""}`;
 
