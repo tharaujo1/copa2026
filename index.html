@@ -197,6 +197,40 @@
   #footer { position: fixed; bottom: 0; left: 0; right: 0; background: #0a0a1a; border-top: 1px solid #1e293b; padding: 8px 16px; text-align: center; font-size: 10px; color: #334155; }
   #toast { position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%); background: #22c55e; color: #000; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 200; }
   #toast.show { opacity: 1; }
+
+  /* ── MODAL ── */
+  #modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 300;
+    background: rgba(0,0,0,0.7); align-items: center; justify-content: center; padding: 20px;
+  }
+  #modal-overlay.show { display: flex; }
+  #modal-box {
+    background: #111827; border-radius: 16px; padding: 20px;
+    width: 100%; max-width: 380px; border: 1px solid #1e293b;
+  }
+  .modal-titulo { font-size: 15px; font-weight: 800; color: #f0f4f8; margin-bottom: 4px; }
+  .modal-sub { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+  .modal-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .modal-btn-filho {
+    flex: 1; min-width: 80px; padding: 10px 8px; border-radius: 10px;
+    border: 2px solid #2d3748; background: #1e293b;
+    color: #94a3b8; font-size: 13px; font-weight: 700; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .modal-btn-filho.sugerido { border-color: #22c55e; background: #22c55e20; color: #22c55e; }
+  .modal-btn-cancelar {
+    width: 100%; margin-top: 10px; padding: 8px; border-radius: 8px;
+    border: 1px solid #334155; background: transparent;
+    color: #475569; font-size: 12px; cursor: pointer;
+  }
+
+  /* ── BADGE SESSÃO ── */
+  #badge-sessao {
+    display: none; position: fixed; bottom: 50px; right: 16px; z-index: 250;
+    background: #f59e0b; color: #000; border-radius: 20px;
+    padding: 6px 14px; font-size: 12px; font-weight: 900;
+    box-shadow: 0 4px 12px rgba(245,158,11,0.4); cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -241,6 +275,19 @@
   <div id="footer">⚽ Copa do Mundo FIFA 2026</div>
   <div id="toast">💾 Salvo!</div>
 </div>
+
+<!-- MODAL SUGESTÃO -->
+<div id="modal-overlay">
+  <div id="modal-box">
+    <div class="modal-titulo" id="modal-titulo"></div>
+    <div class="modal-sub" id="modal-sub"></div>
+    <div class="modal-btns" id="modal-btns"></div>
+    <button class="modal-btn-cancelar" onclick="fecharModal()">Cancelar — não consegui essa</button>
+  </div>
+</div>
+
+<!-- BADGE SESSÃO -->
+<div id="badge-sessao" onclick="verResumoSessao()">📦 Ver resumo</div>
 
 <script>
 // ─── SELEÇÕES ────────────────────────────────────────────────────────────────
@@ -320,13 +367,254 @@ const EMOJIS = ["🔵","🟢","🟡","🟣"];
 const FLAGS = Object.fromEntries(SELECOES.map(s => [s.id, s.flag]));
 
 // ─── CONFIGURAÇÃO ─────────────────────────────────────────────────────────────
-let config = null;   // { nomes: [...], cores: [...] }
+let config = null;
 let state  = null;
 let jogadorAtivo = 0;
 let abaAtiva = "album";
 let selecaoAberta = null;
 let confirmandoReset = false;
 let qtdSel = 3;
+let mostrarTenho = true;
+let mostrarFaltam = true;
+let visaoFamilia = false;
+
+function toggleVisaoFamilia() { visaoFamilia = !visaoFamilia; renderConteudo(); }
+
+function renderVisaoFamilia() {
+  const nomes = config.nomes;
+  let html = `<div style="background:#111827;border-radius:12px;padding:12px 14px;margin-bottom:12px;border:1px solid #a855f750">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:700;color:#a855f7">👥 Família — faltantes consolidados</div>
+      <button onclick="exportarConsolidado()" style="background:#a855f725;border:1px solid #a855f7;color:#a855f7;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">📋 Exportar</button>
+    </div>`;
+  SELECOES.forEach(s => {
+    const faltantes = [];
+    state[nomes[0]][s.id].forEach((_, idx) => {
+      const qtdFalta = nomes.filter(n => state[n][s.id][idx] === 0).length;
+      if (qtdFalta > 0) {
+        const numLabel = s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
+        faltantes.push({ numLabel, qtdFalta });
+      }
+    });
+    if (faltantes.length > 0) {
+      html += `<div style="padding:6px 0;border-bottom:1px solid #1e293b">
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:4px">${FLAGS[s.id]} ${s.nome}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          ${faltantes.map(f => `<span style="background:${f.qtdFalta>1?"#f59e0b20":"#1e293b"};color:${f.qtdFalta>1?"#f59e0b":"#64748b"};border:1px solid ${f.qtdFalta>1?"#f59e0b50":"#334155"};border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600">
+            ${f.numLabel}${f.qtdFalta>1?` ×${f.qtdFalta}`:""}
+          </span>`).join("")}
+        </div>
+      </div>`;
+    }
+  });
+  return html + `</div>`;
+}
+
+// ─── SESSÃO DE TROCA ──────────────────────────────────────────────────────────
+// Cada item: { selId, idx, para, numLabel, selNome, flag }
+let sessaoTroca = [];
+
+function carregarSessao() {
+  try {
+    const raw = localStorage.getItem("copa2026-sessao");
+    if (raw) sessaoTroca = JSON.parse(raw);
+  } catch(e) { sessaoTroca = []; }
+  atualizarBadgeSessao();
+}
+
+function salvarSessao() {
+  try { localStorage.setItem("copa2026-sessao", JSON.stringify(sessaoTroca)); } catch(e) {}
+  atualizarBadgeSessao();
+}
+
+function atualizarBadgeSessao() {
+  const badge = document.getElementById("badge-sessao");
+  if (!badge) return;
+  if (sessaoTroca.length > 0) {
+    badge.style.display = "block";
+    badge.textContent = `📦 Resumo (${sessaoTroca.length})`;
+  } else {
+    badge.style.display = "none";
+  }
+}
+
+// Calcula quem tem menos figurinhas de uma seleção (para sugestão)
+function sugerirDestinatario(selId, idx) {
+  const nomes = config.nomes;
+  const precisam = nomes.filter(n => state[n][selId][idx] === 0);
+  if (precisam.length === 0) return null;
+  // Ordena: menos figurinhas naquela seleção primeiro; empate: alfabético
+  return [...precisam].sort((a, b) => {
+    const ta = state[a][selId].filter(q => q >= 1).length;
+    const tb = state[b][selId].filter(q => q >= 1).length;
+    return ta !== tb ? ta - tb : a.localeCompare(b);
+  })[0];
+}
+
+// Abre modal para confirmar para qual filho vai a figurinha
+function abrirModalFigurinha(selId, idx, numLabel, selNome, flag) {
+  const nomes = config.nomes;
+  const precisam = nomes.filter(n => state[n][selId][idx] === 0);
+  if (precisam.length === 0) return; // ninguém precisa
+
+  const sugerido = sugerirDestinatario(selId, idx);
+
+  document.getElementById("modal-titulo").textContent = `${flag} ${selNome}-${numLabel}`;
+  document.getElementById("modal-sub").textContent =
+    precisam.length === 1
+      ? `✅ Vai direto para ${precisam[0]}!`
+      : `Sugestão: ${sugerido} (menos figurinhas desta seleção)`;
+
+  const btns = document.getElementById("modal-btns");
+  btns.innerHTML = precisam.map(nome => {
+    const c = corNome(nome);
+    const ehSugerido = nome === sugerido;
+    return `<button class="modal-btn-filho${ehSugerido?" sugerido":""}"
+      style="${ehSugerido?"":`border-color:${c.accent}40;color:${c.accent}`}"
+      onclick="confirmarFigurinhaSessao('${selId}',${idx},'${nome}','${numLabel}','${selNome}','${flag}')">
+      ${nome}${ehSugerido?" ✓":""}
+    </button>`;
+  }).join("");
+
+  // Se só 1 precisa, confirma direto sem modal
+  if (precisam.length === 1) {
+    confirmarFigurinhaSessao(selId, idx, precisam[0], numLabel, selNome, flag);
+    return;
+  }
+
+  document.getElementById("modal-overlay").classList.add("show");
+}
+
+function fecharModal() {
+  document.getElementById("modal-overlay").classList.remove("show");
+}
+
+function confirmarFigurinhaSessao(selId, idx, para, numLabel, selNome, flag) {
+  fecharModal();
+  sessaoTroca.push({ selId, idx, para, numLabel, selNome, flag });
+  salvarSessao();
+  renderConteudo();
+  // Toast
+  const toast = document.getElementById("toast");
+  toast.textContent = `✅ ${flag} ${selNome}-${numLabel} → ${para}`;
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 2000);
+}
+
+function verResumoSessao() {
+  abaAtiva = "sessao";
+  selecaoAberta = null;
+  renderAbas();
+  renderConteudo();
+}
+
+function confirmarSessao() {
+  // Aplica todas as figurinhas da sessão no álbum
+  sessaoTroca.forEach(item => {
+    if (state[item.para][item.selId][item.idx] < 99) {
+      state[item.para][item.selId][item.idx]++;
+    }
+  });
+  salvarEstado();
+  localStorage.removeItem("copa2026-sessao");
+  sessaoTroca = [];
+  atualizarBadgeSessao();
+  abaAtiva = "album";
+  render();
+  const toast = document.getElementById("toast");
+  toast.textContent = "✅ Álbum atualizado!";
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 2000);
+}
+
+function cancelarSessao() {
+  if (!confirm("Cancelar a sessão? As figurinhas não serão adicionadas ao álbum.")) return;
+  localStorage.removeItem("copa2026-sessao");
+  sessaoTroca = [];
+  atualizarBadgeSessao();
+  abaAtiva = "album";
+  render();
+}
+
+function removerItemSessao(i) {
+  sessaoTroca.splice(i, 1);
+  salvarSessao();
+  renderConteudo();
+}
+
+function exportarResumoSessao() {
+  const nomes = config.nomes;
+  let texto = `📦 Resumo da sessão de troca\nCopa 2026 Panini\n\n`;
+  nomes.forEach(nome => {
+    const itens = sessaoTroca.filter(s => s.para === nome);
+    if (itens.length > 0) {
+      texto += `${nome}:\n`;
+      itens.forEach(s => { texto += `  ${s.flag} ${s.selNome}-${s.numLabel}\n`; });
+      texto += "\n";
+    }
+  });
+  texto += `Total: ${sessaoTroca.length} figurinha${sessaoTroca.length > 1 ? "s" : ""}`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texto).then(() => {
+      alert("✅ Copiado! Cole no WhatsApp.");
+    }).catch(() => { prompt("Copie:", texto); });
+  } else {
+    prompt("Copie:", texto);
+  }
+}
+
+function renderSessao() {
+  const nomes = config.nomes;
+  if (sessaoTroca.length === 0) {
+    return `<div style="text-align:center;padding:40px 20px;color:#475569">
+      <div style="font-size:40px;margin-bottom:12px">📦</div>
+      <div style="font-size:15px;font-weight:700;color:#64748b">Nenhuma figurinha na sessão</div>
+      <div style="font-size:12px;margin-top:8px">Na aba Álbum, ative só "Faltam" e toque nas figurinhas que conseguiu</div>
+    </div>`;
+  }
+
+  // Agrupa por filho
+  const porFilho = nomes.map(nome => ({
+    nome,
+    cor: corNome(nome),
+    itens: sessaoTroca.map((s, i) => ({ ...s, i })).filter(s => s.para === nome)
+  })).filter(f => f.itens.length > 0);
+
+  const cardsHtml = porFilho.map(({ nome, cor, itens }) => `
+    <div style="background:#111827;border-radius:12px;padding:12px 14px;margin-bottom:10px;border:1px solid ${cor.accent}40">
+      <div style="font-size:14px;font-weight:800;color:${cor.accent};margin-bottom:8px">
+        ${nome} — ${itens.length} figurinha${itens.length > 1 ? "s" : ""}
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${itens.map(s => `
+          <span style="display:inline-flex;align-items:center;gap:4px;background:${cor.accent}15;color:${cor.accent};border:1px solid ${cor.accent}40;border-radius:6px;padding:3px 8px;font-size:12px;font-weight:600">
+            ${s.flag} ${s.selNome}-${s.numLabel}
+            <button onclick="removerItemSessao(${s.i})"
+              style="background:#ef444440;border:none;color:#ef4444;border-radius:3px;padding:1px 4px;font-size:10px;font-weight:900;cursor:pointer">✕</button>
+          </span>`).join("")}
+      </div>
+    </div>`).join("");
+
+  return `
+    <div style="background:#1e293b;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#94a3b8;border:1px solid #334155">
+      📦 <strong style="color:#f59e0b">${sessaoTroca.length} figurinha${sessaoTroca.length > 1 ? "s" : ""}</strong> aguardando confirmação. Separe os bolinhos por filho antes de confirmar.
+    </div>
+    ${cardsHtml}
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+      <button onclick="confirmarSessao()"
+        style="background:linear-gradient(135deg,#22c55e,#16a34a);border:none;color:#000;padding:12px;border-radius:10px;font-size:14px;font-weight:900;cursor:pointer">
+        ✓ Confirmar tudo — atualizar álbum
+      </button>
+      <button onclick="exportarResumoSessao()"
+        style="background:#1e40af25;border:1px solid #1d4ed8;color:#3b82f6;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
+        📋 Exportar resumo — WhatsApp
+      </button>
+      <button onclick="cancelarSessao()"
+        style="background:transparent;border:1px solid #374151;color:#64748b;padding:8px;border-radius:8px;font-size:12px;cursor:pointer">
+        🗑️ Cancelar sessão
+      </button>
+    </div>`;
+}
 
 // Setup screen
 function setQtd(n) {
@@ -455,9 +743,6 @@ function corBotao(qtd, accent) {
   return { bg:"#f9731625", borda:"#f97316", txt:"#f97316" };
 }
 
-let mostrarTenho = true;
-let mostrarFaltam = true;
-
 // ─── INICIAR APP ──────────────────────────────────────────────────────────────
 function iniciarApp() {
   document.getElementById("setup-screen").style.display = "none";
@@ -472,6 +757,7 @@ function iniciarApp() {
   document.getElementById("footer").textContent = `⚽ Copa do Mundo FIFA 2026 · ${nomes}`;
 
   render();
+  carregarSessao();
 }
 
 // ─── RENDER ───────────────────────────────────────────────────────────────────
@@ -506,7 +792,7 @@ function renderJogadores() {
 function renderAbas() {
   const el = document.getElementById("abas");
   const c = corDoJogador(jogadorAtivo);
-  const abas = [["album","📖 Álbum"],["trocas","🔄 Trocas"],["stats","📊 Stats"]];
+  const abas = [["album","📖 Álbum"],["trocas","🔄 Trocas"],["stats","📊 Stats"],["sessao","📦 Sessão"]];
   // esconde trocas se só 1 colecionador
   const abasFiltradas = config.nomes.length === 1
     ? abas.filter(a => a[0] !== "trocas")
@@ -524,6 +810,7 @@ function renderConteudo() {
   if (abaAtiva === "album")  el.innerHTML = renderAlbum();
   if (abaAtiva === "trocas") el.innerHTML = renderTrocas();
   if (abaAtiva === "stats")  el.innerHTML = renderStats();
+  if (abaAtiva === "sessao") el.innerHTML = renderSessao();
 }
 
 // ── ÁLBUM ────────────────────────────────────────────────────────────────────
@@ -559,34 +846,25 @@ function exportarFaltantesTexto() {
 
 function exportarConsolidado() {
   const nomes = config.nomes;
-  let texto = `📋 Figurinhas faltando — Família\n`;
+  let texto = `📋 Figurinhas faltando — Família Gonçalves\n`;
   texto += `Copa 2026 Panini\n\n`;
   SELECOES.forEach(s => {
-    // Figurinhas que pelo menos 1 filho precisa
     const faltantes = [];
-    const arr0 = state[nomes[0]][s.id];
-    arr0.forEach((_, idx) => {
-      const precisam = nomes.filter(n => state[n][s.id][idx] === 0);
-      if (precisam.length > 0) {
+    state[nomes[0]][s.id].forEach((_, idx) => {
+      const algumPrecisa = nomes.some(n => state[n][s.id][idx] === 0);
+      if (algumPrecisa) {
         const numLabel = s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
-        // Mostra quem precisa se não for todos
-        if (precisam.length === nomes.length) {
-          faltantes.push(`${numLabel}`);
-        } else {
-          const iniciais = precisam.map(n => n[0]).join("");
-          faltantes.push(`${numLabel}(${iniciais})`);
-        }
+        faltantes.push(numLabel);
       }
     });
     if (faltantes.length > 0) {
       texto += `${FLAGS[s.id]} ${s.nome}: ${faltantes.join(", ")}\n`;
     }
   });
-  texto += `\n👥 ${nomes.join(", ")}`;
   texto += `\nGerado em ${new Date().toLocaleDateString("pt-BR")}`;
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(texto).then(() => {
-      alert("✅ Copiado! Cole no WhatsApp.\n\nNúmeros sem parênteses = todos precisam\nNúmeros com iniciais = só aquele(s) precisa(m)");
+      alert("✅ Copiado! Cole no WhatsApp.");
     }).catch(() => { prompt("Copie o texto:", texto); });
   } else {
     prompt("Copie o texto:", texto);
@@ -703,12 +981,13 @@ function renderAlbum() {
         border:1px solid #334155;background:#1e293b;color:#94a3b8">
         🖼️ Imagem
       </button>
-      <button onclick="exportarConsolidado()" style="
+      <button onclick="toggleVisaoFamilia()" style="
         padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;
-        border:1px solid #a855f7;background:#a855f725;color:#a855f7">
+        border:1px solid ${visaoFamilia?"#a855f7":"#334155"};background:${visaoFamilia?"#a855f725":"transparent"};color:${visaoFamilia?"#a855f7":"#64748b"}">
         👥 Família
       </button>` : ""}
-  </div>`;
+  </div>
+  ${mostrarFaltam && !mostrarTenho && visaoFamilia ? renderVisaoFamilia() : ""}`;
 
   const legendaItens = [
     { bg:"#1e293b", borda:"#334155", label:"Falta" },
@@ -748,16 +1027,25 @@ function renderAlbum() {
 
     let grid = "";
     if (aberta) {
+      const modoFaltam = !mostrarTenho && mostrarFaltam;
       grid = `<div class="fig-grid">` + figsFiltradas.map(({ qtd, idx }) => {
         const esp = idx < s.esp;
         const cb = corBotao(qtd, c.accent);
         const temBtn = qtd > 0;
         const numLabel = s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
+        // No modo só Faltam e figurinha faltante: toque abre modal de sessão
+        const onclickAdd = (modoFaltam && qtd === 0)
+          ? `abrirModalFigurinha('${s.id}',${idx},'${numLabel}','${s.nome}','${FLAGS[s.id]||""}')`
+          : `addFig('${s.id}',${idx})`;
+        // Estilo especial no modo faltam: destaca que é clicável
+        const estiloFaltam = (modoFaltam && qtd === 0)
+          ? `border-color:#f59e0b;background:#f59e0b10;color:#f59e0b;`
+          : "";
         return `<div class="fig-wrap">
           <button class="fig-btn${temBtn?" tem1":""}"
-            style="border-color:${cb.borda};background:${cb.bg};color:${cb.txt};font-weight:${qtd>0?800:400};box-shadow:${qtd>=2?`0 0 8px ${cb.borda}40`:"none"}"
-            onclick="addFig('${s.id}',${idx})">
-            ${esp?"★":""}${numLabel}${qtd>0?`<div class="fig-qty">×${qtd}</div>`:""}
+            style="${estiloFaltam}border-color:${cb.borda};background:${cb.bg};color:${cb.txt};font-weight:${qtd>0?800:400};box-shadow:${qtd>=2?`0 0 8px ${cb.borda}40`:"none"}"
+            onclick="${onclickAdd}">
+            ${esp?"★":""}${numLabel}${qtd>0?`<div class="fig-qty">×${qtd}</div>`:modoFaltam?"<div style='font-size:8px;margin-top:1px'>toque</div>":""}
           </button>
           ${temBtn?`<button class="fig-sub" style="border:1.5px solid ${cb.borda};color:${cb.borda}" onclick="subFig('${s.id}',${idx})">−</button>`:""}
         </div>`;
