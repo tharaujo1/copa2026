@@ -356,6 +356,8 @@ const SELECOES = [
 
 // Total: 5+4+11 + 48×20 + 14 = 20 + 960 + 14 = 994
 const TOTAL = 994;
+// Ordenada por sigla — usada em listas de faltantes, extras, sessão e exportações
+const SELECOES_ALFA = [...SELECOES].sort((a, b) => a.sigla.localeCompare(b.sigla));
 const PALETA = [
   { bg:"#1a3a5c", accent:"#3b82f6" },
   { bg:"#1a4a2e", accent:"#22c55e" },
@@ -389,7 +391,7 @@ function toggleVisaoFamilia() { visaoFamilia = !visaoFamilia; renderConteudo(); 
 function exportarFamiliaImagem() {
   const nomes = config.nomes;
   const linhasSecoes = [];
-  SELECOES.forEach(s => {
+  SELECOES_ALFA.forEach(s => {
     const faltantes = [];
     state[nomes[0]][s.id].forEach((_, idx) => {
       const qtdFalta = nomes.filter(n => state[n][s.id][idx] === 0).length;
@@ -450,11 +452,10 @@ function renderVisaoFamilia() {
       <div style="font-size:13px;font-weight:700;color:#a855f7">👥 Família — faltantes consolidados</div>
       <button onclick="exportarConsolidado()" style="background:#a855f725;border:1px solid #a855f7;color:#a855f7;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">📋 Exportar</button>
     </div>`;
-  SELECOES.forEach(s => {
+  SELECOES_ALFA.forEach(s => {
     const faltantes = [];
     state[nomes[0]][s.id].forEach((_, idx) => {
       const qtdFalta = nomes.filter(n => state[n][s.id][idx] === 0).length;
-      // Exclui figurinhas já na sessão para todos que precisam
       const nasSessaoCount = sessaoTroca.filter(i => i.selId === s.id && i.idx === idx).length;
       const qtdRestante = qtdFalta - nasSessaoCount;
       if (qtdRestante > 0) {
@@ -908,7 +909,7 @@ function exportarFaltantesTexto() {
   const nome = config.nomes[jogadorAtivo];
   let texto = `📋 Figurinhas faltando — ${nome}\n`;
   texto += `Copa 2026 Panini\n\n`;
-  SELECOES.forEach(s => {
+  SELECOES_ALFA.forEach(s => {
     const arr = state[nome][s.id];
     const faltantes = arr.map((qtd, idx) => {
       if (qtd === 0) {
@@ -935,7 +936,7 @@ function exportarConsolidado() {
   const nomes = config.nomes;
   let texto = `📋 Figurinhas faltando — Família Gonçalves\n`;
   texto += `Copa 2026 Panini\n\n`;
-  SELECOES.forEach(s => {
+  SELECOES_ALFA.forEach(s => {
     const faltantes = [];
     state[nomes[0]][s.id].forEach((_, idx) => {
       const qtdFalta = nomes.filter(n => state[n][s.id][idx] === 0).length;
@@ -964,7 +965,7 @@ function exportarFaltantesImagem() {
 
   // Monta linhas com bandeira + nome + números
   const linhasSecoes = [];
-  SELECOES.forEach(s => {
+  SELECOES_ALFA.forEach(s => {
     const arr = state[nome][s.id];
     const faltantes = arr.map((qtd, idx) => {
       if (qtd === 0) {
@@ -1103,7 +1104,7 @@ function renderAlbum() {
   // Ambos ativos: ordem do álbum. Qualquer um isolado: ordem alfabética
   const selecoesFiltradas = (mostrarTenho && mostrarFaltam)
     ? SELECOES
-    : [...SELECOES].sort((a, b) => a.nome.localeCompare(b.nome));
+    : [...SELECOES].sort((a, b) => a.sigla.localeCompare(b.sigla));
 
   const sels = selecoesFiltradas.map(s => {
     const arr = state[nomeAtivo][s.id];
@@ -1402,8 +1403,8 @@ function renderTrocas() {
     const chipsLivres = livresLista.length > 0
       ? `<div class="troca-chips" style="margin-top:6px">
           ${[...livresLista].sort((a,b) => {
-            if (a.sel.nome < b.sel.nome) return -1;
-            if (a.sel.nome > b.sel.nome) return 1;
+            if (a.sel.sigla < b.sel.sigla) return -1;
+            if (a.sel.sigla > b.sel.sigla) return 1;
             return a.numLabel - b.numLabel;
           }).map(f => {
             const idxReal = SELECOES.find(s => s.id === f.sel.id)
