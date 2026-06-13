@@ -803,12 +803,11 @@ function renderTrocas() {
                 })
               : -1;
             return `<span class="chip" style="background:${c.accent}15;color:${c.accent};border-color:${c.accent}40;display:inline-flex;align-items:center;gap:4px">
+              ${idxReal >= 0 ? `<button onclick="addFigTroca('${j}','${f.sel.id}',${idxReal})"
+                style="background:#22c55e;border:none;color:#000;border-radius:4px;padding:2px 7px;font-size:13px;font-weight:900;cursor:pointer;line-height:1">+</button>` : ""}
               ${FLAGS[f.sel.id]} ${f.sel.sigla}-${f.numLabel}${f.qtdLivre>1?`<span style="color:#f59e0b"> ×${f.qtdLivre}</span>`:""}
-              ${idxReal >= 0 ? `
-                <button onclick="subFigTroca('${j}','${f.sel.id}',${idxReal})"
-                  style="background:#ef4444;border:none;color:#fff;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:900;cursor:pointer">−</button>
-                <button onclick="addFigTroca('${j}','${f.sel.id}',${idxReal})"
-                  style="background:#22c55e;border:none;color:#000;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:900;cursor:pointer">+</button>` : ""}
+              ${idxReal >= 0 ? `<button onclick="subFigTroca('${j}','${f.sel.id}',${idxReal})"
+                style="background:#ef4444;border:none;color:#fff;border-radius:4px;padding:2px 7px;font-size:13px;font-weight:900;cursor:pointer;line-height:1">−</button>` : ""}
             </span>`;
           }).join("")}
         </div>` : "";
