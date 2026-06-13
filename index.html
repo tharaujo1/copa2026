@@ -320,7 +320,7 @@ const SELECOES = [
   { id:"CUW",  nome:"Curaçao",           sigla:"CUW",    qtd:20, esp:2,  flag:"🇨🇼" },
   { id:"CIV",  nome:"Costa do Marfim",   sigla:"CIV",    qtd:20, esp:2,  flag:"🇨🇮" },
   { id:"ECU",  nome:"Equador",           sigla:"ECU",    qtd:20, esp:2,  flag:"🇪🇨" },
-  { id:"NED",  nome:"Países Baixos",     sigla:"NED",    qtd:20, esp:2,  flag:"🇳🇱" },
+  { id:"NED",  nome:"Nederland",        sigla:"NED",    qtd:20, esp:2,  flag:"🇳🇱" },
   { id:"JPN",  nome:"Japão",             sigla:"JPN",    qtd:20, esp:2,  flag:"🇯🇵" },
   { id:"SWE",  nome:"Suécia",            sigla:"SWE",    qtd:20, esp:2,  flag:"🇸🇪" },
   { id:"TUN",  nome:"Tunísia",           sigla:"TUN",    qtd:20, esp:2,  flag:"🇹🇳" },
@@ -1168,7 +1168,7 @@ function renderAlbum() {
         onclick="toggleSel('${s.id}')">
         <span class="sel-flag">${FLAGS[s.id]||"🏳️"}</span>
         <div class="sel-info">
-          <div class="sel-nome" style="color:${completa?c.accent:"#e2e8f0"}">${s.nome}${completa?" ✓":""}</div>
+          <div class="sel-nome" style="color:${completa?c.accent:"#e2e8f0"}">${s.nome} <span style="color:#475569;font-size:11px;font-weight:400">${s.sigla}</span>${completa?" ✓":""}</div>
           <div class="sel-sub">${tem}/${s.qtd}${extrasLabel}</div>
         </div>
         <div class="sel-pct" style="color:${pct===100?c.accent:"#94a3b8"}">${pct}%</div>
