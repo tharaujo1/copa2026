@@ -1277,8 +1277,8 @@ function renderTrocas() {
     const chipsLivres = livresLista.length > 0
       ? `<div class="troca-chips" style="margin-top:6px">
           ${[...livresLista].sort((a,b) => {
-            if (a.sel.sigla < b.sel.sigla) return -1;
-            if (a.sel.sigla > b.sel.sigla) return 1;
+            if (a.sel.nome < b.sel.nome) return -1;
+            if (a.sel.nome > b.sel.nome) return 1;
             return a.numLabel - b.numLabel;
           }).map(f => {
             const idxReal = SELECOES.find(s => s.id === f.sel.id)
