@@ -1100,10 +1100,10 @@ function renderAlbum() {
     <div class="legenda-hint">toque <b style="color:#94a3b8">+</b> · botão <b style="color:#94a3b8">−</b></div>
   </div>` : "";
 
-  // No modo só Faltam: ordem alfabética. Modo normal: ordem do álbum
-  const selecoesFiltradas = (!mostrarTenho && mostrarFaltam)
-    ? [...SELECOES].sort((a, b) => a.nome.localeCompare(b.nome))
-    : SELECOES;
+  // Ambos ativos: ordem do álbum. Qualquer um isolado: ordem alfabética
+  const selecoesFiltradas = (mostrarTenho && mostrarFaltam)
+    ? SELECOES
+    : [...SELECOES].sort((a, b) => a.nome.localeCompare(b.nome));
 
   const sels = selecoesFiltradas.map(s => {
     const arr = state[nomeAtivo][s.id];
