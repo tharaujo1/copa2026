@@ -583,25 +583,24 @@ function renderAlbum() {
 
 // ── TROCAS ───────────────────────────────────────────────────────────────────
 
-// Retorna quantas figurinhas únicas cada jogador tem (para priorização)
-function totalTem(nome) {
-  return SELECOES.reduce((acc, s) =>
-    acc + state[nome][s.id].filter(q => q >= 1).length, 0);
+// Quantas figurinhas faltam para completar uma seleção específica
+function faltamNaSel(nome, selId) {
+  const s = SELECOES.find(x => x.id === selId);
+  return s.qtd - state[nome][selId].filter(q => q >= 1).length;
 }
 
-// Para cada figurinha extra de "de", decide quais destinatários têm prioridade
-// Regra: quem tem menos figurinhas totais tem prioridade. Empate: ordem em config.nomes.
+// Priorização por seleção:
+// 1. Quem tem menos faltando naquela seleção (mais próximo de completar)
+// 2. Empate: ordem alfabética pelo nome
 function distribuirExtras(de, destinatarios, selId, idx, qtdExtra) {
-  // Filtra só quem não tem a figurinha
   const precisam = destinatarios.filter(p => state[p][selId][idx] === 0);
   if (precisam.length === 0) return [];
-  // Ordena por prioridade: menos figurinhas primeiro; empate = ordem dos nomes
   const ordenados = [...precisam].sort((a, b) => {
-    const diff = totalTem(a) - totalTem(b);
-    if (diff !== 0) return diff;
-    return config.nomes.indexOf(a) - config.nomes.indexOf(b);
+    const faltA = faltamNaSel(a, selId);
+    const faltB = faltamNaSel(b, selId);
+    if (faltA !== faltB) return faltA - faltB; // menos faltando = mais próximo = prioridade
+    return a.localeCompare(b); // empate: alfabético pelo nome
   });
-  // Distribui as extras disponíveis na ordem de prioridade
   const resultado = [];
   let sobraram = qtdExtra;
   for (const dest of ordenados) {
@@ -667,19 +666,16 @@ function renderTrocas() {
           const qB = state[B][s.id][idx];
           const extras = qA - 1;
           if (extras <= 0 || qB !== 0) return;
-          // Quantas extras sobram para B após priorizar outros que também precisam
           const outrosQueNaoTem = nomes.filter(o => o !== A && o !== B && state[o][s.id][idx] === 0);
-          // Ordena outros por prioridade (menos figurinhas primeiro)
           const outrosOrdenados = [...outrosQueNaoTem].sort((x, y) => {
-            const diff = totalTem(x) - totalTem(y);
-            return diff !== 0 ? diff : config.nomes.indexOf(x) - config.nomes.indexOf(y);
+            const diff = faltamNaSel(x, s.id) - faltamNaSel(y, s.id);
+            return diff !== 0 ? diff : x.localeCompare(y);
           });
-          // Desconta extras usados pelos outros com maior prioridade que B
-          const temB = totalTem(B);
+          const faltB = faltamNaSel(B, s.id);
           let extrasUsadosAntes = 0;
           for (const outro of outrosOrdenados) {
-            const temOutro = totalTem(outro);
-            if (temOutro < temB || (temOutro === temB && config.nomes.indexOf(outro) < config.nomes.indexOf(B))) {
+            const faltOutro = faltamNaSel(outro, s.id);
+            if (faltOutro < faltB || (faltOutro === faltB && outro.localeCompare(B) < 0)) {
               extrasUsadosAntes++;
             }
           }
@@ -692,14 +688,14 @@ function renderTrocas() {
           if (extras <= 0 || qA !== 0) return;
           const outrosQueNaoTem = nomes.filter(o => o !== B && o !== A && state[o][s.id][idx] === 0);
           const outrosOrdenados = [...outrosQueNaoTem].sort((x, y) => {
-            const diff = totalTem(x) - totalTem(y);
-            return diff !== 0 ? diff : config.nomes.indexOf(x) - config.nomes.indexOf(y);
+            const diff = faltamNaSel(x, s.id) - faltamNaSel(y, s.id);
+            return diff !== 0 ? diff : x.localeCompare(y);
           });
-          const temA = totalTem(A);
+          const faltA = faltamNaSel(A, s.id);
           let extrasUsadosAntes = 0;
           for (const outro of outrosOrdenados) {
-            const temOutro = totalTem(outro);
-            if (temOutro < temA || (temOutro === temA && config.nomes.indexOf(outro) < config.nomes.indexOf(A))) {
+            const faltOutro = faltamNaSel(outro, s.id);
+            if (faltOutro < faltA || (faltOutro === faltA && outro.localeCompare(A) < 0)) {
               extrasUsadosAntes++;
             }
           }
