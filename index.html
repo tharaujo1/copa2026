@@ -379,7 +379,197 @@ let qtdSel = 3;
 let mostrarTenho = true;
 let mostrarFaltam = true;
 let visaoFamilia = false;
+let visaoTrocaExtras = 'individual'; // 'individual' | 'familia'
+let ordemAlbum = false; // false = alfabética (sigla), true = ordem do álbum
 let submenuAberto = null;
+
+function setVisaoExtras(qual) { visaoTrocaExtras = qual; render(); }
+
+function setOrdem(album) { ordemAlbum = album; render(); }
+
+function renderOrdemToggle() {
+  return `<div style="display:flex;gap:6px;margin-bottom:8px">
+    <button onclick="setOrdem(false)" style="
+      padding:5px 11px;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;
+      border:1px solid ${!ordemAlbum?"#f59e0b":"#334155"};
+      background:${!ordemAlbum?"#f59e0b20":"transparent"};
+      color:${!ordemAlbum?"#f59e0b":"#64748b"}">
+      🔤 Alfabética
+    </button>
+    <button onclick="setOrdem(true)" style="
+      padding:5px 11px;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;
+      border:1px solid ${ordemAlbum?"#f59e0b":"#334155"};
+      background:${ordemAlbum?"#f59e0b20":"transparent"};
+      color:${ordemAlbum?"#f59e0b":"#64748b"}">
+      📖 Ordem do álbum
+    </button>
+  </div>`;
+}
+
+// Retorna a lista de SELECOES na ordem escolhida (alfabética por sigla ou ordem do álbum)
+function selecoesOrdenadas() {
+  return ordemAlbum ? SELECOES : SELECOES_ALFA;
+}
+
+// Figurinhas extras "livres" de um filho (descontando o que será priorizado para os irmãos)
+function calcularLivres(nome) {
+  const nomes = config.nomes;
+  const outros = nomes.filter(o => o !== nome);
+  const resultado = [];
+  SELECOES.forEach(sel => {
+    state[nome][sel.id].forEach((qtd, idx) => {
+      if (qtd >= 2) {
+        const priorizados = distribuirExtras(nome, outros, sel.id, idx, qtd - 1);
+        const qtdLivre = Math.max(0, (qtd - 1) - priorizados.length);
+        if (qtdLivre > 0) {
+          const numLabel = sel.inicio !== undefined ? (sel.inicio+idx === 0 ? "00" : sel.inicio+idx) : idx + 1;
+          resultado.push({ sel, idx, numLabel, qtdLivre });
+        }
+      }
+    });
+  });
+  return resultado;
+}
+
+// Consolida as repetidas livres dos 3 filhos para oferecer a um amigo
+// Quando mais de 1 filho tem a mesma figurinha livre, define de quem ela "sai primeiro":
+// o filho com álbum mais completo (maior %), empate por ordem alfabética do nome.
+function calcularRepetidasParaAmigo() {
+  const nomes = config.nomes;
+  const mapa = {};
+  nomes.forEach(nome => {
+    calcularLivres(nome).forEach(item => {
+      const key = `${item.sel.id}|${item.idx}`;
+      if (!mapa[key]) mapa[key] = { sel: item.sel, idx: item.idx, numLabel: item.numLabel, porFilho: {} };
+      mapa[key].porFilho[nome] = item.qtdLivre;
+    });
+  });
+  return Object.values(mapa).map(item => {
+    const candidatos = Object.keys(item.porFilho);
+    const ordenados = [...candidatos].sort((a, b) => {
+      const pctA = statsJogador(a).pct, pctB = statsJogador(b).pct;
+      if (pctA !== pctB) return pctB - pctA; // álbum mais completo primeiro
+      return a.localeCompare(b);
+    });
+    const total = candidatos.reduce((acc, n) => acc + item.porFilho[n], 0);
+    return { sel: item.sel, idx: item.idx, numLabel: item.numLabel, total, origem: ordenados[0] };
+  });
+}
+
+// Monta a lista ordenada de repetidas para amigos, já no critério de ordenação ativo
+function listaRepetidasOrdenada() {
+  const lista = calcularRepetidasParaAmigo();
+  const ordem = selecoesOrdenadas();
+  const posicao = Object.fromEntries(ordem.map((s, i) => [s.id, i]));
+  return lista.sort((a, b) => {
+    const pa = posicao[a.sel.id], pb = posicao[b.sel.id];
+    if (pa !== pb) return pa - pb;
+    return a.idx - b.idx;
+  });
+}
+
+function renderRepetidasAmigo() {
+  const lista = listaRepetidasOrdenada();
+  if (lista.length === 0) {
+    return `<div style="color:#475569;font-size:12px;text-align:center;padding:14px 0">Nenhuma repetida livre no momento</div>`;
+  }
+  return `<div class="troca-chips" style="margin-top:8px">
+    ${lista.map(item => {
+      const c = corNome(item.origem);
+      return `<span class="chip" style="background:${c.accent}15;color:${c.accent};border-color:${c.accent}40">
+        ${FLAGS[item.sel.id]} ${item.sel.sigla}-${item.numLabel}${item.total>1?` <span style="font-size:9px">×${item.total}</span>`:""}
+        <span style="font-size:9px;opacity:0.75"> · ${item.origem}</span>
+      </span>`;
+    }).join("")}
+  </div>`;
+}
+
+function exportarRepetidasAmigoTexto() {
+  const lista = listaRepetidasOrdenada();
+  let texto = `🤝 Repetidas disponíveis — Família Gonçalves\n`;
+  texto += `Copa 2026 Panini\n\n`;
+  if (lista.length === 0) {
+    texto += `Nenhuma repetida livre no momento.\n`;
+  } else {
+    // Agrupa por seleção mantendo a ordem ativa
+    const porSel = {};
+    lista.forEach(item => {
+      if (!porSel[item.sel.id]) porSel[item.sel.id] = { sel: item.sel, itens: [] };
+      porSel[item.sel.id].itens.push(item);
+    });
+    Object.values(porSel).forEach(grupo => {
+      const nums = grupo.itens.map(it => it.total > 1 ? `${it.numLabel}(×${it.total})` : `${it.numLabel}`).join(", ");
+      texto += `${FLAGS[grupo.sel.id]} ${grupo.sel.nome}: ${nums}\n`;
+    });
+  }
+  texto += `\nGerado em ${new Date().toLocaleDateString("pt-BR")}`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texto).then(() => {
+      alert("✅ Copiado! Cole no WhatsApp.");
+    }).catch(() => { prompt("Copie o texto:", texto); });
+  } else {
+    prompt("Copie o texto:", texto);
+  }
+}
+
+function exportarRepetidasAmigoImagem() {
+  const lista = listaRepetidasOrdenada();
+  const porSel = {};
+  lista.forEach(item => {
+    if (!porSel[item.sel.id]) porSel[item.sel.id] = { sel: item.sel, itens: [] };
+    porSel[item.sel.id].itens.push(item);
+  });
+  const linhasSecoes = Object.values(porSel).map(grupo => ({
+    flag: FLAGS[grupo.sel.id],
+    nome: grupo.sel.nome,
+    nums: grupo.itens.map(it => it.total > 1 ? `${it.numLabel}(×${it.total})` : `${it.numLabel}`).join(", ")
+  }));
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  const largura = 900;
+  const paddingH = 40;
+  const alturaHeader = 100;
+  const alturaLinha = 38;
+  const paddingV = 30;
+  canvas.width = largura;
+  canvas.height = alturaHeader + Math.max(linhasSecoes.length, 1) * alturaLinha + paddingV * 2;
+
+  ctx.fillStyle = "#0f1923";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#22c55e";
+  ctx.fillRect(0, 0, canvas.width, 6);
+
+  ctx.font = "bold 28px Arial";
+  ctx.fillStyle = "#22c55e";
+  ctx.fillText("🤝 Repetidas — Família Gonçalves", paddingH, 48);
+  ctx.font = "20px Arial";
+  ctx.fillStyle = "#f59e0b";
+  ctx.fillText(`Copa 2026 Panini · ${new Date().toLocaleDateString("pt-BR")}`, paddingH, 80);
+
+  if (linhasSecoes.length === 0) {
+    ctx.font = "20px Arial";
+    ctx.fillStyle = "#94a3b8";
+    ctx.fillText("Nenhuma repetida livre no momento", paddingH, alturaHeader + paddingV);
+  }
+
+  linhasSecoes.forEach((linha, i) => {
+    const y = alturaHeader + paddingV + i * alturaLinha;
+    if (i % 2 === 0) { ctx.fillStyle = "#ffffff08"; ctx.fillRect(0, y-26, canvas.width, alturaLinha); }
+    ctx.font = "20px Arial";
+    ctx.fillStyle = "#e2e8f0";
+    const prefixo = `${linha.flag} ${linha.nome}: `;
+    ctx.fillText(prefixo, paddingH, y);
+    ctx.fillStyle = "#94a3b8";
+    ctx.fillText(linha.nums, paddingH + ctx.measureText(prefixo).width, y);
+  });
+
+  const link = document.createElement("a");
+  link.download = `repetidas-familia.png`;
+  link.href = canvas.toDataURL();
+  link.click();
+  alert("✅ Imagem salva!");
+}
 
 function toggleSubmenu(qual) {
   submenuAberto = submenuAberto === qual ? null : qual;
@@ -391,7 +581,7 @@ function toggleVisaoFamilia() { visaoFamilia = !visaoFamilia; renderConteudo(); 
 function exportarFamiliaImagem() {
   const nomes = config.nomes;
   const linhasSecoes = [];
-  SELECOES_ALFA.forEach(s => {
+  selecoesOrdenadas().forEach(s => {
     const faltantes = [];
     state[nomes[0]][s.id].forEach((_, idx) => {
       const qtdFalta = nomes.filter(n => state[n][s.id][idx] === 0).length;
@@ -452,7 +642,7 @@ function renderVisaoFamilia() {
       <div style="font-size:13px;font-weight:700;color:#a855f7">👥 Família — faltantes consolidados</div>
       <button onclick="exportarConsolidado()" style="background:#a855f725;border:1px solid #a855f7;color:#a855f7;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">📋 Exportar</button>
     </div>`;
-  SELECOES_ALFA.forEach(s => {
+  selecoesOrdenadas().forEach(s => {
     const faltantes = [];
     state[nomes[0]][s.id].forEach((_, idx) => {
       const qtdFalta = nomes.filter(n => state[n][s.id][idx] === 0).length;
@@ -908,7 +1098,7 @@ function exportarFaltantesTexto() {
   const nome = config.nomes[jogadorAtivo];
   let texto = `📋 Figurinhas faltando — ${nome}\n`;
   texto += `Copa 2026 Panini\n\n`;
-  SELECOES_ALFA.forEach(s => {
+  selecoesOrdenadas().forEach(s => {
     const arr = state[nome][s.id];
     const faltantes = arr.map((qtd, idx) => {
       if (qtd === 0) {
@@ -935,7 +1125,7 @@ function exportarConsolidado() {
   const nomes = config.nomes;
   let texto = `📋 Figurinhas faltando — Família Gonçalves\n`;
   texto += `Copa 2026 Panini\n\n`;
-  SELECOES_ALFA.forEach(s => {
+  selecoesOrdenadas().forEach(s => {
     const faltantes = [];
     state[nomes[0]][s.id].forEach((_, idx) => {
       const qtdFalta = nomes.filter(n => state[n][s.id][idx] === 0).length;
@@ -964,7 +1154,7 @@ function exportarFaltantesImagem() {
 
   // Monta linhas com bandeira + nome + números
   const linhasSecoes = [];
-  SELECOES_ALFA.forEach(s => {
+  selecoesOrdenadas().forEach(s => {
     const arr = state[nome][s.id];
     const faltantes = arr.map((qtd, idx) => {
       if (qtd === 0) {
@@ -1084,6 +1274,7 @@ function renderAlbum() {
           <button onclick="toggleVisaoFamilia()" style="flex:1;padding:7px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${visaoFamilia?'#a855f7':'#334155'};background:${visaoFamilia?'#a855f725':'transparent'};color:${visaoFamilia?'#a855f7':'#64748b'}">👁️ Tela</button>
         </div>` : ""}` : ""}
   </div>
+  ${(mostrarFaltam && !mostrarTenho) || (mostrarTenho && !mostrarFaltam) ? renderOrdemToggle() : ""}
   ${mostrarFaltam && !mostrarTenho && visaoFamilia ? renderVisaoFamilia() : ""}`;
 
   const legendaItens = [
@@ -1100,10 +1291,10 @@ function renderAlbum() {
     <div class="legenda-hint">toque <b style="color:#94a3b8">+</b> · botão <b style="color:#94a3b8">−</b></div>
   </div>` : "";
 
-  // Ambos ativos: ordem do álbum. Qualquer um isolado: ordem alfabética
+  // Ambos ativos: ordem do álbum. Qualquer um isolado: ordem escolhida pelo toggle
   const selecoesFiltradas = (mostrarTenho && mostrarFaltam)
     ? SELECOES
-    : [...SELECOES].sort((a, b) => a.sigla.localeCompare(b.sigla));
+    : selecoesOrdenadas();
 
   const sels = selecoesFiltradas.map(s => {
     const arr = state[nomeAtivo][s.id];
@@ -1112,7 +1303,8 @@ function renderAlbum() {
     const maxQ = Math.max(...arr);
     const pct = Math.round(tem / s.qtd * 100);
     const completa = tem === s.qtd;
-    const aberta = selecaoAberta === s.id || (!mostrarTenho && mostrarFaltam);
+    const modoIsolado = mostrarTenho !== mostrarFaltam; // só um dos dois ativo
+    const aberta = selecaoAberta === s.id || modoIsolado;
     const extrasLabel = extras > 0
       ? `<span style="color:${maxQ>=3?"#f97316":"#f59e0b"}"> · ${extras} extra${extras>1?"s":""}</span>` : "";
 
@@ -1380,46 +1572,24 @@ function renderTrocas() {
     </div>`;
   }).join("");
 
+  const sortFn = ordemAlbum
+    ? (a,b) => SELECOES.indexOf(a.sel) - SELECOES.indexOf(b.sel) || a.idx - b.idx
+    : (a,b) => a.sel.sigla.localeCompare(b.sel.sigla) || a.idx - b.idx;
+
   const extrasHtml = nomes.map(j => {
     const c = corNome(j);
     const s = statsJogador(j);
-    const livresLista = [];
-    SELECOES.forEach(sel => {
-      state[j][sel.id].forEach((qtd, idx) => {
-        if (qtd >= 2) {
-          const outros = nomes.filter(o => o !== j);
-          const priorizados = distribuirExtras(j, outros, sel.id, idx, qtd - 1);
-          // extras livres = total extras - quantos foram priorizados para irmãos
-          const qtdLivre = Math.max(0, (qtd - 1) - priorizados.length);
-          if (qtdLivre > 0) {
-            const numLabel = sel.inicio !== undefined ? (sel.inicio+idx === 0 ? "00" : sel.inicio+idx) : idx + 1;
-            livresLista.push({ sel, numLabel, qtdLivre });
-          }
-        }
-      });
-    });
+    const livresLista = calcularLivres(j);
 
     const chipsLivres = livresLista.length > 0
       ? `<div class="troca-chips" style="margin-top:6px">
-          ${[...livresLista].sort((a,b) => {
-            if (a.sel.sigla < b.sel.sigla) return -1;
-            if (a.sel.sigla > b.sel.sigla) return 1;
-            return a.numLabel - b.numLabel;
-          }).map(f => {
-            const idxReal = SELECOES.find(s => s.id === f.sel.id)
-              ? state[j][f.sel.id].findIndex((qtd, i) => {
-                  const label = f.sel.inicio !== undefined
-                    ? (f.sel.inicio+i === 0 ? "00" : f.sel.inicio+i)
-                    : i+1;
-                  return String(label) === String(f.numLabel) && qtd >= 2;
-                })
-              : -1;
+          ${[...livresLista].sort(sortFn).map(f => {
             return `<span class="chip" style="background:${c.accent}15;color:${c.accent};border-color:${c.accent}40;display:inline-flex;align-items:center;gap:4px">
-              ${idxReal >= 0 ? `<button onclick="addFigTroca('${j}','${f.sel.id}',${idxReal})"
-                style="background:#22c55e;border:none;color:#000;border-radius:4px;padding:2px 7px;font-size:13px;font-weight:900;cursor:pointer;line-height:1">+</button>` : ""}
+              <button onclick="addFigTroca('${j}','${f.sel.id}',${f.idx})"
+                style="background:#22c55e;border:none;color:#000;border-radius:4px;padding:2px 7px;font-size:13px;font-weight:900;cursor:pointer;line-height:1">+</button>
               ${FLAGS[f.sel.id]} ${f.sel.sigla}-${f.numLabel}${f.qtdLivre>1?`<span style="color:#f59e0b"> ×${f.qtdLivre}</span>`:""}
-              ${idxReal >= 0 ? `<button onclick="subFigTroca('${j}','${f.sel.id}',${idxReal})"
-                style="background:#ef4444;border:none;color:#fff;border-radius:4px;padding:2px 7px;font-size:13px;font-weight:900;cursor:pointer;line-height:1">−</button>` : ""}
+              <button onclick="subFigTroca('${j}','${f.sel.id}',${f.idx})"
+                style="background:#ef4444;border:none;color:#fff;border-radius:4px;padding:2px 7px;font-size:13px;font-weight:900;cursor:pointer;line-height:1">−</button>
             </span>`;
           }).join("")}
         </div>` : "";
@@ -1442,9 +1612,34 @@ function renderTrocas() {
   return `
     <div class="info-box">💡 Mostra extras que um colecionador pode dar ao outro. <strong style="color:#f59e0b">Troquem entre vocês primeiro!</strong></div>
     ${cardsHtml}
+    ${renderOrdemToggle()}
     <div class="extras-card">
-      <div class="ranking-titulo">🔁 Extras livres para trocar fora</div>
-      ${extrasHtml}
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <div class="ranking-titulo" style="margin:0">🔁 Extras livres para trocar fora</div>
+        <div style="display:flex;gap:6px">
+          <button onclick="setVisaoExtras('individual')" style="
+            padding:5px 11px;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;
+            border:1px solid ${visaoTrocaExtras==='individual'?'#3b82f6':'#334155'};
+            background:${visaoTrocaExtras==='individual'?'#3b82f625':'transparent'};
+            color:${visaoTrocaExtras==='individual'?'#3b82f6':'#64748b'}">
+            👤 Individual
+          </button>
+          <button onclick="setVisaoExtras('familia')" style="
+            padding:5px 11px;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;
+            border:1px solid ${visaoTrocaExtras==='familia'?'#a855f7':'#334155'};
+            background:${visaoTrocaExtras==='familia'?'#a855f725':'transparent'};
+            color:${visaoTrocaExtras==='familia'?'#a855f7':'#64748b'}">
+            👥 Família
+          </button>
+        </div>
+      </div>
+      ${visaoTrocaExtras === 'individual' ? extrasHtml : `
+        <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px">
+          <button onclick="exportarRepetidasAmigoTexto()" style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #1d4ed8;background:#1e40af25;color:#3b82f6">📋 Texto</button>
+          <button onclick="exportarRepetidasAmigoImagem()" style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#94a3b8">🖼️ Imagem</button>
+        </div>
+        ${renderRepetidasAmigo()}
+      `}
     </div>`;
 }
 
