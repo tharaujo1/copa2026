@@ -381,12 +381,12 @@ let mostrarTenho = true;
 let mostrarFaltam = true;
 let visaoFamilia = false;
 let visaoTrocaExtras = 'individual'; // 'individual' | 'familia'
-let mostrarOrigem = false;
-function toggleOrigem() { mostrarOrigem = !mostrarOrigem; render(); }
+let doacaoStaging = []; // {selId, idx, sel, numLabel, origem}
 let ordemAlbum = false; // false = alfabética (sigla), true = ordem do álbum
 let submenuAberto = null;
 
 function setVisaoExtras(qual) { visaoTrocaExtras = qual; render(); }
+
 
 function setOrdem(album) { ordemAlbum = album; render(); }
 
@@ -471,21 +471,123 @@ function listaRepetidasOrdenada() {
   });
 }
 
+// Quantas unidades de uma figurinha já estão "em staging" (separadas, aguardando confirmação)
+function qtdEmStaging(selId, idx) {
+  return doacaoStaging.filter(it => it.selId === selId && it.idx === idx).length;
+}
+
+// Dado o que já está em staging, calcula quem ainda tem cópia livre dessa figurinha
+// e devolve o próximo "de quem tirar" (álbum mais completo primeiro, empate alfabético)
+function proximaOrigem(selId, idx) {
+  const nomes = config.nomes;
+  const jaContados = {}; // quantas unidades já reservadas por filho neste staging
+  doacaoStaging.forEach(it => {
+    if (it.selId === selId && it.idx === idx) {
+      jaContados[it.origem] = (jaContados[it.origem] || 0) + 1;
+    }
+  });
+  const candidatos = nomes.filter(nome => {
+    const livre = calcularLivres(nome).find(l => l.sel.id === selId && l.idx === idx);
+    const qtdLivre = livre ? livre.qtdLivre : 0;
+    return qtdLivre - (jaContados[nome] || 0) > 0;
+  });
+  if (candidatos.length === 0) return null;
+  return [...candidatos].sort((a, b) => {
+    const pctA = statsJogador(a).pct, pctB = statsJogador(b).pct;
+    if (pctA !== pctB) return pctB - pctA;
+    return a.localeCompare(b);
+  })[0];
+}
+
+// Toque numa figurinha da lista "Família" — separa para retirada (sem descontar ainda)
+function adicionarParaDoacao(selId, idx) {
+  const sel = SELECOES.find(s => s.id === selId);
+  const numLabel = sel.inicio !== undefined ? (sel.inicio+idx === 0 ? "00" : sel.inicio+idx) : idx + 1;
+  const origem = proximaOrigem(selId, idx);
+  if (!origem) {
+    const toast = document.getElementById("toast");
+    toast.textContent = `⚠️ Sem mais cópias livres dessa figurinha`;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 2000);
+    return;
+  }
+  doacaoStaging.push({ selId, idx, sel, numLabel, origem });
+  render();
+}
+
+// Confirma 1 item do painel "De quem tirar" — desconta de fato e remove da lista
+function confirmarItemDoacao(i) {
+  const item = doacaoStaging[i];
+  if (!item) return;
+  subFigTroca(item.origem, item.selId, item.idx);
+  doacaoStaging.splice(i, 1);
+  render();
+}
+
+// Confirma tudo de uma vez — "já peguei todas as figurinhas do bolinho"
+function limparDoacaoStaging() {
+  doacaoStaging.forEach(item => {
+    if (state[item.origem][item.selId][item.idx] > 0) {
+      state[item.origem][item.selId][item.idx]--;
+    }
+  });
+  salvarEstado();
+  doacaoStaging = [];
+  render();
+}
+
 function renderRepetidasAmigo() {
   const lista = listaRepetidasOrdenada();
+  const painel = renderDeQuemTirar();
   if (lista.length === 0) {
-    return `<div style="color:#475569;font-size:12px;text-align:center;padding:14px 0">Nenhuma repetida livre no momento</div>`;
+    return painel + `<div style="color:#475569;font-size:12px;text-align:center;padding:14px 0">Nenhuma repetida livre no momento</div>`;
   }
-  return `<div class="troca-chips" style="margin-top:8px">
+  const chips = `<div class="troca-chips" style="margin-top:8px">
     ${lista.map(item => {
-      const c = mostrarOrigem ? corNome(item.origem) : { accent: "#94a3b8" };
-      return `<button onclick="confirmarDoacao('${item.sel.id}',${item.idx})" class="chip" style="background:${c.accent}15;color:${c.accent};border-color:${c.accent}40;cursor:pointer">
-        ${FLAGS[item.sel.id]} ${item.sel.sigla}-${item.numLabel}${item.total>1?` <span style="font-size:9px">×${item.total}</span>`:""}
-        ${mostrarOrigem ? `<span style="font-size:9px;opacity:0.75"> · ${item.origem}</span>` : ""}
+      const total = item.total;
+      const staged = qtdEmStaging(item.sel.id, item.idx);
+      const restante = total - staged;
+      const cheio = restante <= 0;
+      const c = cheio ? { accent: "#334155" } : { accent: "#94a3b8" };
+      return `<button onclick="adicionarParaDoacao('${item.sel.id}',${item.idx})"
+        class="chip" style="background:${c.accent}15;color:${c.accent};border-color:${c.accent}40;cursor:${cheio?"default":"pointer"};${cheio?"opacity:0.5":""}">
+        ${FLAGS[item.sel.id]} ${item.sel.sigla}-${item.numLabel}${total>1?` <span style="font-size:9px">×${restante}/${total}</span>`:""}
+        ${staged>0?`<span style="font-size:9px;color:#22c55e"> ✓${staged}</span>`:""}
       </button>`;
     }).join("")}
   </div>
-  <div style="font-size:11px;color:#64748b;margin-top:8px">💡 Toque numa figurinha quando ela for entregue ao amigo — o app desconta automaticamente do filho certo.</div>`;
+  <div style="font-size:11px;color:#64748b;margin-top:8px">💡 Toque numa figurinha quando o amigo escolher — ela entra na lista "De quem tirar" abaixo.</div>`;
+  return painel + chips;
+}
+
+// Painel "De quem tirar" — agrupado por filho na ordem Gabriel · Lucca · Davi
+function renderDeQuemTirar() {
+  if (doacaoStaging.length === 0) return "";
+  const nomes = config.nomes;
+  const grupos = nomes.map(nome => ({
+    nome,
+    itens: doacaoStaging
+      .map((item, i) => ({ ...item, _i: i }))
+      .filter(it => it.origem === nome)
+  })).filter(g => g.itens.length > 0);
+
+  return `<div style="background:#0f1923;border:1px solid #f59e0b50;border-radius:12px;padding:12px;margin-bottom:10px">
+    <div style="font-size:13px;font-weight:700;color:#f59e0b;margin-bottom:8px">👁️ De quem tirar</div>
+    ${grupos.map(g => {
+      const c = corNome(g.nome);
+      return `<div style="margin-bottom:8px">
+        <div style="font-size:12px;font-weight:700;color:${c.accent};margin-bottom:4px">${g.nome}</div>
+        <div class="troca-chips">
+          ${g.itens.map(it => `<button onclick="confirmarItemDoacao(${it._i})" class="chip" style="background:${c.accent}15;color:${c.accent};border-color:${c.accent}40;cursor:pointer">
+            ${FLAGS[it.sel.id]} ${it.sel.sigla}-${it.numLabel} <span style="font-size:9px">✕</span>
+          </button>`).join("")}
+        </div>
+      </div>`;
+    }).join("")}
+    <button onclick="limparDoacaoStaging()" style="width:100%;margin-top:4px;padding:8px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">
+      🗑️ Já peguei tudo — confirmar e limpar
+    </button>
+  </div>`;
 }
 
 function exportarRepetidasAmigoTexto() {
@@ -1754,9 +1856,6 @@ function renderTrocas() {
         </div>
       </div>
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
-        ${visaoTrocaExtras === 'familia' ? `
-          <button onclick="toggleOrigem()" style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${mostrarOrigem?'#f59e0b':'#334155'};background:${mostrarOrigem?'#f59e0b20':'transparent'};color:${mostrarOrigem?'#f59e0b':'#64748b'}">👁️ De quem tirar</button>
-        ` : ""}
         <button onclick="${visaoTrocaExtras==='individual'?'exportarExtrasIndividualTexto':'exportarRepetidasAmigoTexto'}()" style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #1d4ed8;background:#1e40af25;color:#3b82f6">📋 Texto</button>
         <button onclick="${visaoTrocaExtras==='individual'?'exportarExtrasIndividualImagem':'exportarRepetidasAmigoImagem'}()" style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#94a3b8">🖼️ Imagem</button>
       </div>
@@ -1956,19 +2055,6 @@ function subFigTroca(nome, selId, idx) {
     renderConteudo();
     renderJogadores();
   }
-}
-
-// Confirma que uma repetida foi entregue a um amigo: desconta do filho de origem
-function confirmarDoacao(selId, idx) {
-  const lista = calcularRepetidasParaAmigo();
-  const item = lista.find(i => i.sel.id === selId && i.idx === idx);
-  if (!item) return;
-  const nome = item.origem;
-  subFigTroca(nome, selId, idx);
-  const toast = document.getElementById("toast");
-  toast.textContent = `✅ ${item.sel.flag} ${item.sel.sigla}-${item.numLabel} entregue (tirado de ${nome})`;
-  toast.classList.add("show");
-  setTimeout(() => toast.classList.remove("show"), 2500);
 }
 
 function forcarAtualizacao() {
