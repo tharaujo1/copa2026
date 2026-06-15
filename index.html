@@ -798,7 +798,7 @@ function toggleSubmenu(qual) {
   renderConteudo();
 }
 
-function toggleVisaoFamilia() { visaoFamilia = !visaoFamilia; renderConteudo(); }
+function toggleVisaoFamilia() { visaoFamilia = !visaoFamilia; submenuAberto = null; renderConteudo(); }
 
 function exportarFamiliaImagem() {
   const nomes = config.nomes;
@@ -1313,8 +1313,8 @@ function renderConteudo() {
 }
 
 // ── ÁLBUM ────────────────────────────────────────────────────────────────────
-function toggleTenho() { mostrarTenho = !mostrarTenho; submenuAberto = null; renderConteudo(); }
-function toggleFaltam() { mostrarFaltam = !mostrarFaltam; submenuAberto = null; renderConteudo(); }
+function toggleTenho() { mostrarTenho = !mostrarTenho; submenuAberto = null; visaoFamilia = false; renderConteudo(); }
+function toggleFaltam() { mostrarFaltam = !mostrarFaltam; submenuAberto = null; visaoFamilia = false; renderConteudo(); }
 
 function exportarFaltantesTexto() {
   const nome = config.nomes[jogadorAtivo];
@@ -1470,31 +1470,22 @@ function renderAlbum() {
       ✗ Faltam
     </button>
     ${mostrarFaltam && !mostrarTenho ? `
-      <button onclick="toggleSubmenu('individual')" style="
+      <button onclick="toggleVisaoFamilia()" style="
         padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;
-        border:1px solid ${submenuAberto==='individual'?'#3b82f6':'#334155'};
-        background:${submenuAberto==='individual'?'#3b82f625':'transparent'};
-        color:${submenuAberto==='individual'?'#3b82f6':'#64748b'}">
-        👤 Individual ${submenuAberto==='individual'?'▲':'▼'}
+        border:1px solid ${visaoFamilia?'#a855f7':'#334155'};
+        background:${visaoFamilia?'#a855f725':'transparent'};
+        color:${visaoFamilia?'#a855f7':'#64748b'}">
+        👥 Família
       </button>
-      <button onclick="toggleSubmenu('familia')" style="
-        padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;
-        border:1px solid ${submenuAberto==='familia'?'#a855f7':'#334155'};
-        background:${submenuAberto==='familia'?'#a855f725':'transparent'};
-        color:${submenuAberto==='familia'?'#a855f7':'#64748b'}">
-        👥 Família ${submenuAberto==='familia'?'▲':'▼'}
-      </button>
-      ${submenuAberto==='individual'?`
+      ${!visaoFamilia?`
         <div style="width:100%;display:flex;gap:6px;margin-top:4px">
           <button onclick="exportarFaltantesTexto()" style="flex:1;padding:7px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #1d4ed8;background:#1e40af25;color:#3b82f6">📋 Texto</button>
           <button onclick="exportarFaltantesImagem()" style="flex:1;padding:7px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#94a3b8">🖼️ Imagem</button>
-        </div>` : ""}
-      ${submenuAberto==='familia'?`
+        </div>` : `
         <div style="width:100%;display:flex;gap:6px;margin-top:4px">
           <button onclick="exportarConsolidado()" style="flex:1;padding:7px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #a855f7;background:#a855f725;color:#a855f7">📋 Texto</button>
           <button onclick="exportarFamiliaImagem()" style="flex:1;padding:7px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #7c3aed;background:#7c3aed25;color:#a855f7">🖼️ Imagem</button>
-          <button onclick="toggleVisaoFamilia()" style="flex:1;padding:7px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${visaoFamilia?'#a855f7':'#334155'};background:${visaoFamilia?'#a855f725':'transparent'};color:${visaoFamilia?'#a855f7':'#64748b'}">👁️ Tela</button>
-        </div>` : ""}` : ""}
+        </div>`}` : ""}
   </div>
   ${(mostrarFaltam && !mostrarTenho) || (mostrarTenho && !mostrarFaltam) ? renderOrdemToggle() : ""}
   ${mostrarFaltam && !mostrarTenho && visaoFamilia ? renderVisaoFamilia() : ""}`;
@@ -1980,7 +1971,7 @@ function renderStats() {
 }
 
 // ─── AÇÕES ────────────────────────────────────────────────────────────────────
-function setJogador(i) { jogadorAtivo = i; selecaoAberta = null; render(); }
+function setJogador(i) { jogadorAtivo = i; selecaoAberta = null; visaoFamilia = false; submenuAberto = null; render(); }
 function setAba(a)     { abaAtiva = a; selecaoAberta = null; render(); }
 function toggleSel(id) { selecaoAberta = selecaoAberta === id ? null : id; renderConteudo(); }
 
