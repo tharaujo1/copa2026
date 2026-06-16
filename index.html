@@ -695,19 +695,25 @@ function listaExtrasIndividualPorFilho() {
 }
 
 function exportarExtrasIndividualTexto() {
-  const porFilho = listaExtrasIndividualPorFilho();
-  let texto = `🔁 Extras livres — Família Gonçalves\n`;
-  texto += `Copa 2026 Panini\n\n`;
-  Object.entries(porFilho).forEach(([nome, lista]) => {
-    texto += `${nome}:\n`;
-    if (lista.length === 0) {
-      texto += `Nenhuma extra livre no momento.\n\n`;
-      return;
-    }
-    const itens = lista.map(it => it.qtdLivre > 1 ? `${FLAGS[it.sel.id]} ${it.sel.sigla}-${it.numLabel}(×${it.qtdLivre})` : `${FLAGS[it.sel.id]} ${it.sel.sigla}-${it.numLabel}`);
-    texto += itens.join(", ") + "\n\n";
+  const nome = config.nomes[jogadorAtivo];
+  const c = corNome(nome);
+  const lista = calcularLivres(nome);
+  const ordem = selecoesOrdenadas();
+  const posicao = Object.fromEntries(ordem.map((s, i) => [s.id, i]));
+  const ordenada = lista.sort((a, b) => {
+    const pa = posicao[a.sel.id], pb = posicao[b.sel.id];
+    if (pa !== pb) return pa - pb;
+    return a.idx - b.idx;
   });
-  texto += `Gerado em ${new Date().toLocaleDateString("pt-BR")}`;
+  let texto = `🔁 Extras livres — ${nome}\n`;
+  texto += `Copa 2026 Panini\n\n`;
+  if (ordenada.length === 0) {
+    texto += `Nenhuma extra livre no momento.\n`;
+  } else {
+    const itens = ordenada.map(it => it.qtdLivre > 1 ? `${FLAGS[it.sel.id]} ${it.sel.sigla}-${it.numLabel}(×${it.qtdLivre})` : `${FLAGS[it.sel.id]} ${it.sel.sigla}-${it.numLabel}`);
+    texto += itens.join(", ") + "\n";
+  }
+  texto += `\nGerado em ${new Date().toLocaleDateString("pt-BR")}`;
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(texto).then(() => {
       alert("✅ Copiado! Cole no WhatsApp.");
@@ -718,76 +724,68 @@ function exportarExtrasIndividualTexto() {
 }
 
 function exportarExtrasIndividualImagem() {
-  const porFilho = listaExtrasIndividualPorFilho();
-  const nomes = config.nomes;
+  const nome = config.nomes[jogadorAtivo];
+  const c = corNome(nome);
+  const lista = calcularLivres(nome);
+  const ordem = selecoesOrdenadas();
+  const posicao = Object.fromEntries(ordem.map((s, i) => [s.id, i]));
+  const ordenada = lista.sort((a, b) => {
+    const pa = posicao[a.sel.id], pb = posicao[b.sel.id];
+    if (pa !== pb) return pa - pb;
+    return a.idx - b.idx;
+  });
 
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   const largura = 900;
   const paddingH = 40;
   const alturaHeader = 100;
-  const alturaNome = 40;
   const alturaLinha = 30;
   const paddingV = 30;
 
-  // Pré-calcula quantas linhas cada filho vai precisar (quebra de texto)
   ctx.font = "18px Arial";
   const wrapWidth = largura - paddingH * 2;
-  const blocos = nomes.map(nome => {
-    const lista = porFilho[nome];
-    const itens = lista.map(it => it.qtdLivre > 1 ? `${FLAGS[it.sel.id]} ${it.sel.sigla}-${it.numLabel} ×${it.qtdLivre}` : `${FLAGS[it.sel.id]} ${it.sel.sigla}-${it.numLabel}`);
-    const texto = itens.length > 0 ? itens.join("   ") : "Nenhuma extra livre";
-    // Quebra simples por largura
-    const palavras = texto.split("   ");
-    const linhas = [];
-    let linhaAtual = "";
-    palavras.forEach(p => {
-      const teste = linhaAtual ? linhaAtual + "   " + p : p;
-      if (ctx.measureText(teste).width > wrapWidth && linhaAtual) {
-        linhas.push(linhaAtual);
-        linhaAtual = p;
-      } else {
-        linhaAtual = teste;
-      }
-    });
-    if (linhaAtual) linhas.push(linhaAtual);
-    return { nome, linhas };
+  const itens = ordenada.map(it => it.qtdLivre > 1 ? `${FLAGS[it.sel.id]} ${it.sel.sigla}-${it.numLabel} ×${it.qtdLivre}` : `${FLAGS[it.sel.id]} ${it.sel.sigla}-${it.numLabel}`);
+  const texto = itens.length > 0 ? itens.join("   ") : "Nenhuma extra livre";
+  const palavras = texto.split("   ");
+  const linhas = [];
+  let linhaAtual = "";
+  palavras.forEach(p => {
+    const teste = linhaAtual ? linhaAtual + "   " + p : p;
+    if (ctx.measureText(teste).width > wrapWidth && linhaAtual) {
+      linhas.push(linhaAtual);
+      linhaAtual = p;
+    } else {
+      linhaAtual = teste;
+    }
   });
+  if (linhaAtual) linhas.push(linhaAtual);
 
-  const alturaTotal = alturaHeader + paddingV + blocos.reduce((acc, b) => acc + alturaNome + b.linhas.length * alturaLinha + 16, 0);
   canvas.width = largura;
-  canvas.height = alturaTotal;
+  canvas.height = alturaHeader + paddingV + Math.max(linhas.length, 1) * alturaLinha + paddingV;
 
   ctx.fillStyle = "#0f1923";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#3b82f6";
+  ctx.fillStyle = c.accent;
   ctx.fillRect(0, 0, canvas.width, 6);
 
   ctx.font = "bold 28px Arial";
-  ctx.fillStyle = "#3b82f6";
-  ctx.fillText("🔁 Extras livres — Família Gonçalves", paddingH, 48);
+  ctx.fillStyle = c.accent;
+  ctx.fillText(`🔁 Extras livres — ${nome}`, paddingH, 48);
   ctx.font = "20px Arial";
   ctx.fillStyle = "#f59e0b";
   ctx.fillText(`Copa 2026 Panini · ${new Date().toLocaleDateString("pt-BR")}`, paddingH, 80);
 
+  ctx.font = "18px Arial";
+  ctx.fillStyle = "#cbd5e1";
   let y = alturaHeader + paddingV;
-  blocos.forEach(bloco => {
-    const c = corNome(bloco.nome);
-    ctx.font = "bold 22px Arial";
-    ctx.fillStyle = c.accent;
-    ctx.fillText(bloco.nome, paddingH, y);
-    y += alturaNome - 6;
-    ctx.font = "18px Arial";
-    ctx.fillStyle = "#cbd5e1";
-    bloco.linhas.forEach(linha => {
-      ctx.fillText(linha, paddingH, y);
-      y += alturaLinha;
-    });
-    y += 16;
+  linhas.forEach(linha => {
+    ctx.fillText(linha, paddingH, y);
+    y += alturaLinha;
   });
 
   const link = document.createElement("a");
-  link.download = `extras-individual.png`;
+  link.download = `extras-${nome.toLowerCase()}.png`;
   link.href = canvas.toDataURL();
   link.click();
   alert("✅ Imagem salva!");
