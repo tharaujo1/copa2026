@@ -550,6 +550,7 @@ function adicionarParaDoacao(selId, idx) {
     amigoAtual = nome.trim();
   }
   doacaoStaging.push({ selId, idx, sel, numLabel, origem, amigo: amigoAtual });
+  salvarDoacao();
   render();
 }
 
@@ -567,6 +568,7 @@ function renomearAmigo() {
     if (item.amigo === "Sem nome") item.amigo = nome.trim();
   });
   amigoAtual = nome.trim();
+  salvarDoacao();
   render();
 }
 
@@ -576,6 +578,7 @@ function confirmarItemDoacao(i) {
   subFigTroca(item.origem, item.selId, item.idx);
   doacaoStaging.splice(i, 1);
   if (doacaoStaging.length === 0) amigoAtual = null;
+  salvarDoacao();
   render();
 }
 
@@ -587,6 +590,7 @@ function limparDoacaoStaging() {
   salvarEstado();
   doacaoStaging = [];
   amigoAtual = null;
+  salvarDoacao();
   render();
 }
 
@@ -671,13 +675,13 @@ function renderDeQuemTirar() {
 function confirmarItemReceber(i) {
   const item = receberStaging[i];
   if (!item) return;
-  // Marca no álbum do filho destino
   if (state[item.paraFilho][item.selId][item.idx] === 0) {
     state[item.paraFilho][item.selId][item.idx] = 1;
     salvarEstado();
   }
   receberStaging.splice(i, 1);
   if (receberStaging.length === 0) amigoReceber = null;
+  salvarReceber();
   render();
 }
 
@@ -690,6 +694,7 @@ function receberTudo() {
   salvarEstado();
   receberStaging = [];
   amigoReceber = null;
+  salvarReceber();
   render();
 }
 
@@ -830,6 +835,7 @@ function processarImportacao() {
     // Reserva tudo no staging
     paraReservar.forEach(item => doacaoStaging.push(item));
     amigoAtual = nomeAmigo;
+    salvarDoacao();
     fecharImportar();
     document.getElementById("importar-texto").value = "";
     document.getElementById("importar-nome").value = "";
@@ -865,6 +871,7 @@ function processarImportacao() {
     // Adiciona ao receberStaging
     paraReservar.forEach(item => receberStaging.push(item));
     amigoReceber = nomeAmigo;
+    salvarReceber();
     // Gera texto para mandar ao amigo
     const porSel = {};
     paraReservar.forEach(it => {
@@ -1195,12 +1202,43 @@ function carregarSessao() {
     const raw = localStorage.getItem("copa2026-sessao");
     if (raw) sessaoTroca = JSON.parse(raw);
   } catch(e) { sessaoTroca = []; }
+  try {
+    const raw = localStorage.getItem("copa2026-doacao");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      doacaoStaging = parsed.staging || [];
+      amigoAtual = parsed.amigoAtual || null;
+      // Reconecta referência ao objeto sel
+      doacaoStaging.forEach(item => {
+        item.sel = SELECOES.find(s => s.id === item.selId) || item.sel;
+      });
+    }
+  } catch(e) { doacaoStaging = []; }
+  try {
+    const raw = localStorage.getItem("copa2026-receber");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      receberStaging = parsed.staging || [];
+      amigoReceber = parsed.amigoReceber || null;
+      receberStaging.forEach(item => {
+        item.sel = SELECOES.find(s => s.id === item.selId) || item.sel;
+      });
+    }
+  } catch(e) { receberStaging = []; }
   atualizarBadgeSessao();
 }
 
 function salvarSessao() {
   try { localStorage.setItem("copa2026-sessao", JSON.stringify(sessaoTroca)); } catch(e) {}
   atualizarBadgeSessao();
+}
+
+function salvarDoacao() {
+  try { localStorage.setItem("copa2026-doacao", JSON.stringify({ staging: doacaoStaging, amigoAtual })); } catch(e) {}
+}
+
+function salvarReceber() {
+  try { localStorage.setItem("copa2026-receber", JSON.stringify({ staging: receberStaging, amigoReceber })); } catch(e) {}
 }
 
 function atualizarBadgeSessao() {
