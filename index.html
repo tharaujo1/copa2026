@@ -298,7 +298,7 @@
     <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:6px">Tipo de lista</div>
     <div style="display:flex;gap:10px;margin-bottom:12px">
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#e2e8f0;cursor:pointer">
-        <input type="radio" name="importar-tipo" value="faltantes" checked> Faltantes dele (quero dar)
+        <input type="radio" name="importar-tipo" value="faltantes" checked> Faltantes dele (quero enviar)
       </label>
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#e2e8f0;cursor:pointer">
         <input type="radio" name="importar-tipo" value="repetidas"> Repetidas dele (quero receber)
@@ -592,6 +592,105 @@ function limparDoacaoStaging() {
   amigoAtual = null;
   salvarDoacao();
   render();
+}
+
+// Versão simplificada para 1 álbum — sem agrupamento por filho
+function renderDeQuemTirarSolo() {
+  doacaoStaging.forEach(item => { if (!item.amigo) item.amigo = "Sem nome"; });
+  const porAmigo = {};
+  doacaoStaging.forEach((item, i) => {
+    if (!porAmigo[item.amigo]) porAmigo[item.amigo] = [];
+    porAmigo[item.amigo].push({ ...item, _i: i });
+  });
+  const amigos = Object.keys(porAmigo);
+  return `<div style="background:#0f1923;border:1px solid #f59e0b50;border-radius:12px;padding:12px;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+      <div style="font-size:13px;font-weight:700;color:#f59e0b">👁️ De quem tirar</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${amigoAtual ? `<span style="font-size:11px;font-weight:700;color:#f59e0b;border:1px solid #f59e0b50;padding:3px 8px;border-radius:8px">✏️ ${amigoAtual}</span>` : ""}
+        <button onclick="novoAmigo()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6">+ Novo amigo</button>
+        ${doacaoStaging.length > 0 ? `<button onclick="limparDoacaoStaging()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Já peguei tudo</button>` : ""}
+      </div>
+    </div>
+    ${amigos.length === 0
+      ? `<div style="font-size:12px;color:#475569;text-align:center;padding:8px 0">Toque nas figurinhas abaixo quando o amigo escolher</div>`
+      : amigos.map(amigo => {
+          const ehSemNome = amigo === "Sem nome";
+          return `<div style="margin-bottom:8px;background:#1e293b;border-radius:10px;padding:10px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <div style="font-size:12px;font-weight:800;color:${ehSemNome?"#f59e0b":"#e2e8f0"}">🤝 ${amigo}</div>
+              ${ehSemNome ? `<button onclick="renomearAmigo()" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">✏️ Nomear</button>` : ""}
+            </div>
+            <div class="troca-chips">
+              ${porAmigo[amigo].map(it => `<button onclick="confirmarItemDoacao(${it._i})" class="chip"
+                style="background:#94a3b815;color:#94a3b8;border-color:#94a3b840;cursor:pointer">
+                ${FLAGS[it.sel.id]} ${it.sel.sigla}-${it.numLabel} <span style="font-size:9px">✕</span>
+              </button>`).join("")}
+            </div>
+          </div>`;
+        }).join("")}
+  </div>`;
+}
+
+function renderPraQuemDarSolo() {
+  const porAmigo = {};
+  receberStaging.forEach((item, i) => {
+    if (!porAmigo[item.amigo]) porAmigo[item.amigo] = [];
+    porAmigo[item.amigo].push({ ...item, _i: i });
+  });
+  const amigos = Object.keys(porAmigo);
+  return `<div style="background:#0f1923;border:1px solid #22c55e50;border-radius:12px;padding:12px;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+      <div style="font-size:13px;font-weight:700;color:#22c55e">📬 Pra quem dar (aguardando receber)</div>
+      ${receberStaging.length > 0 ? `<button onclick="receberTudo()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Recebi tudo</button>` : ""}
+    </div>
+    ${amigos.length === 0
+      ? `<div style="font-size:12px;color:#475569;text-align:center;padding:8px 0">Nenhuma figurinha aguardando — importe a lista de repetidas de um amigo</div>`
+      : amigos.map(amigo => `<div style="margin-bottom:8px;background:#1e293b;border-radius:10px;padding:10px">
+          <div style="font-size:12px;font-weight:800;color:#e2e8f0;margin-bottom:6px">🤝 ${amigo} vai me dar</div>
+          <div class="troca-chips">
+            ${porAmigo[amigo].map(it => `<button onclick="confirmarItemReceber(${it._i})" class="chip"
+              style="background:#22c55e15;color:#22c55e;border-color:#22c55e40;cursor:pointer">
+              ${FLAGS[it.sel.id]} ${it.sel.sigla}-${it.numLabel} <span style="font-size:9px">✓</span>
+            </button>`).join("")}
+          </div>
+        </div>`).join("")}
+  </div>`;
+}
+
+function renderRepetidasAmigoSolo() {
+  const nome = config.nomes[0];
+  const lista = calcularLivres(nome);
+  const ordem = selecoesOrdenadas();
+  const posicao = Object.fromEntries(ordem.map((s, i) => [s.id, i]));
+  const ordenada = lista.sort((a, b) => {
+    const pa = posicao[a.sel.id], pb = posicao[b.sel.id];
+    if (pa !== pb) return pa - pb;
+    return a.idx - b.idx;
+  });
+
+  const painelDar = renderDeQuemTirarSolo();
+  const painelReceber = renderPraQuemDarSolo();
+
+  if (ordenada.length === 0) {
+    return painelDar + painelReceber + `<div style="color:#475569;font-size:12px;text-align:center;padding:14px 0">Nenhuma repetida livre no momento</div>`;
+  }
+
+  const chips = `<div class="troca-chips" style="margin-top:8px">
+    ${ordenada.map(item => {
+      const staged = doacaoStaging.filter(it => it.selId === item.sel.id && it.idx === item.idx).length;
+      const restante = item.qtdLivre - staged;
+      const cheio = restante <= 0;
+      const c = cheio ? { accent: "#334155" } : { accent: "#94a3b8" };
+      return `<button onclick="adicionarParaDoacao('${item.sel.id}',${item.idx})"
+        class="chip" style="background:${c.accent}15;color:${c.accent};border-color:${c.accent}40;cursor:${cheio?"default":"pointer"};${cheio?"opacity:0.5":""}">
+        ${FLAGS[item.sel.id]} ${item.sel.sigla}-${item.numLabel}${item.qtdLivre>1?` <span style="font-size:9px">×${restante}/${item.qtdLivre}</span>`:""}
+        ${staged>0?`<span style="font-size:9px;color:#22c55e"> ✓${staged}</span>`:""}
+      </button>`;
+    }).join("")}
+  </div>
+  <div style="font-size:11px;color:#64748b;margin-top:8px">💡 Toque numa figurinha quando o amigo escolher.</div>`;
+  return painelDar + painelReceber + chips;
 }
 
 function renderRepetidasAmigo() {
@@ -1206,23 +1305,27 @@ function carregarSessao() {
     const raw = localStorage.getItem("copa2026-doacao");
     if (raw) {
       const parsed = JSON.parse(raw);
-      doacaoStaging = parsed.staging || [];
-      amigoAtual = parsed.amigoAtual || null;
-      // Reconecta referência ao objeto sel
-      doacaoStaging.forEach(item => {
-        item.sel = SELECOES.find(s => s.id === item.selId) || item.sel;
-      });
+      // Aceita formato antigo (array direto) e novo ({staging, amigoAtual})
+      const lista = Array.isArray(parsed) ? parsed : (parsed.staging || []);
+      amigoAtual = Array.isArray(parsed) ? null : (parsed.amigoAtual || null);
+      doacaoStaging = lista.map(item => ({
+        ...item,
+        amigo: item.amigo || "Sem nome",
+        sel: SELECOES.find(s => s.id === item.selId) || null
+      })).filter(item => item.sel); // descarta itens com selId inválido
     }
   } catch(e) { doacaoStaging = []; }
   try {
     const raw = localStorage.getItem("copa2026-receber");
     if (raw) {
       const parsed = JSON.parse(raw);
-      receberStaging = parsed.staging || [];
-      amigoReceber = parsed.amigoReceber || null;
-      receberStaging.forEach(item => {
-        item.sel = SELECOES.find(s => s.id === item.selId) || item.sel;
-      });
+      const lista = Array.isArray(parsed) ? parsed : (parsed.staging || []);
+      amigoReceber = Array.isArray(parsed) ? null : (parsed.amigoReceber || null);
+      receberStaging = lista.map(item => ({
+        ...item,
+        amigo: item.amigo || "Sem nome",
+        sel: SELECOES.find(s => s.id === item.selId) || null
+      })).filter(item => item.sel);
     }
   } catch(e) { receberStaging = []; }
   atualizarBadgeSessao();
@@ -1234,11 +1337,17 @@ function salvarSessao() {
 }
 
 function salvarDoacao() {
-  try { localStorage.setItem("copa2026-doacao", JSON.stringify({ staging: doacaoStaging, amigoAtual })); } catch(e) {}
+  try {
+    const slim = doacaoStaging.map(({selId, idx, numLabel, origem, amigo}) => ({selId, idx, numLabel, origem, amigo}));
+    localStorage.setItem("copa2026-doacao", JSON.stringify({ staging: slim, amigoAtual }));
+  } catch(e) {}
 }
 
 function salvarReceber() {
-  try { localStorage.setItem("copa2026-receber", JSON.stringify({ staging: receberStaging, amigoReceber })); } catch(e) {}
+  try {
+    const slim = receberStaging.map(({selId, idx, numLabel, paraFilho, amigo}) => ({selId, idx, numLabel, paraFilho, amigo}));
+    localStorage.setItem("copa2026-receber", JSON.stringify({ staging: slim, amigoReceber }));
+  } catch(e) {}
 }
 
 function atualizarBadgeSessao() {
@@ -1601,6 +1710,10 @@ function render() {
 
 function renderJogadores() {
   const el = document.getElementById("jogadores");
+  if (config.nomes.length === 1) {
+    el.innerHTML = ""; // sem seletor com 1 álbum
+    return;
+  }
   el.innerHTML = config.nomes.map((j, i) => {
     const s = statsJogador(j);
     const c = corDoJogador(i);
@@ -1625,10 +1738,10 @@ function renderAbas() {
   const el = document.getElementById("abas");
   const c = corDoJogador(jogadorAtivo);
   const abas = [["album","📖 Álbum"],["trocas","🔄 Trocas"],["stats","📊 Stats"],["sessao","📦 Sessão"]];
-  // esconde trocas se só 1 colecionador
-  const abasFiltradas = config.nomes.length === 1
-    ? abas.filter(a => a[0] !== "trocas")
-    : abas;
+  const multiAlbum = config.nomes.length > 1;
+  const abasFiltradas = multiAlbum
+    ? abas
+    : abas.filter(a => a[0] !== "sessao");
   el.innerHTML = abasFiltradas.map(([key, label]) => {
     const ativo = key === abaAtiva;
     return `<button class="btn-aba${ativo?" ativa":""}"
@@ -2155,15 +2268,17 @@ function renderTrocas() {
     </div>`;
   }).join("");
 
+  const multiAlbum = nomes.length > 1;
+
   return `
-    <div class="info-box">💡 Mostra extras que um colecionador pode dar ao outro. <strong style="color:#f59e0b">Troquem entre vocês primeiro!</strong></div>
+    <div class="info-box">💡 ${multiAlbum ? `Mostra extras que um colecionador pode dar ao outro. <strong style="color:#f59e0b">Troquem entre vocês primeiro!</strong>` : `Gerencie suas repetidas e trocas com amigos.`}</div>
     <button onclick="abrirImportar()" style="width:100%;margin-bottom:10px;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">📥 Importar lista de amigo</button>
-    ${cardsHtml}
+    ${multiAlbum ? cardsHtml : ""}
     ${renderOrdemToggle()}
     <div class="extras-card">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
         <div class="ranking-titulo" style="margin:0">🔁 Extras livres para trocar fora</div>
-        <div style="display:flex;gap:6px">
+        ${multiAlbum ? `<div style="display:flex;gap:6px">
           <button onclick="setVisaoExtras('individual')" style="
             padding:5px 11px;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;
             border:1px solid ${visaoTrocaExtras==='individual'?'#3b82f6':'#334155'};
@@ -2178,13 +2293,13 @@ function renderTrocas() {
             color:${visaoTrocaExtras==='familia'?'#a855f7':'#64748b'}">
             👥 Família
           </button>
-        </div>
+        </div>` : ""}
       </div>
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
-        <button onclick="${visaoTrocaExtras==='individual'?'exportarExtrasIndividualTexto':'exportarRepetidasAmigoTexto'}()" style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #1d4ed8;background:#1e40af25;color:#3b82f6">📋 Texto</button>
-        <button onclick="${visaoTrocaExtras==='individual'?'exportarExtrasIndividualImagem':'exportarRepetidasAmigoImagem'}()" style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#94a3b8">🖼️ Imagem</button>
+        <button onclick="${!multiAlbum || visaoTrocaExtras==='individual'?'exportarExtrasIndividualTexto':'exportarRepetidasAmigoTexto'}()" style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #1d4ed8;background:#1e40af25;color:#3b82f6">📋 Texto</button>
+        <button onclick="${!multiAlbum || visaoTrocaExtras==='individual'?'exportarExtrasIndividualImagem':'exportarRepetidasAmigoImagem'}()" style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#94a3b8">🖼️ Imagem</button>
       </div>
-      ${visaoTrocaExtras === 'individual' ? extrasHtml : renderRepetidasAmigo()}
+      ${!multiAlbum ? renderRepetidasAmigoSolo() : visaoTrocaExtras === 'individual' ? extrasHtml : renderRepetidasAmigo()}
     </div>`;
 }
 
