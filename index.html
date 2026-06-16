@@ -561,6 +561,14 @@ function novoAmigo() {
   render();
 }
 
+function removerGrupoAmigo(amigo) {
+  if (!confirm(`Remover todas as figurinhas reservadas para ${amigo}?`)) return;
+  doacaoStaging = doacaoStaging.filter(item => item.amigo !== amigo);
+  if (amigoAtual === amigo) amigoAtual = null;
+  salvarDoacao();
+  render();
+}
+
 function renomearAmigo() {
   const nome = prompt("Nome do amigo para estas figurinhas:", "");
   if (!nome || !nome.trim()) return;
@@ -607,7 +615,7 @@ function renderDeQuemTirarSolo() {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
       <div style="font-size:13px;font-weight:700;color:#f59e0b">👁️ De quem tirar</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${amigoAtual ? `<span style="font-size:11px;font-weight:700;color:#f59e0b;border:1px solid #f59e0b50;padding:3px 8px;border-radius:8px">✏️ ${amigoAtual}</span>` : ""}
+        ${amigoAtual ? `<span style="font-size:11px;font-weight:700;color:#f59e0b;border:1px solid #f59e0b50;padding:3px 8px;border-radius:8px">👤 Para: ${amigoAtual}</span>` : ""}
         <button onclick="novoAmigo()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6">+ Novo amigo</button>
         ${doacaoStaging.length > 0 ? `<button onclick="limparDoacaoStaging()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Já peguei tudo</button>` : ""}
       </div>
@@ -619,7 +627,7 @@ function renderDeQuemTirarSolo() {
           return `<div style="margin-bottom:8px;background:#1e293b;border-radius:10px;padding:10px">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
               <div style="font-size:12px;font-weight:800;color:${ehSemNome?"#f59e0b":"#e2e8f0"}">🤝 ${amigo}</div>
-              ${ehSemNome ? `<button onclick="renomearAmigo()" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">✏️ Nomear</button>` : ""}
+              ${ehSemNome ? `<button onclick="renomearAmigo()" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">Identificar amigo</button>` : ""}
             </div>
             <div class="troca-chips">
               ${porAmigo[amigo].map(it => `<button onclick="confirmarItemDoacao(${it._i})" class="chip"
@@ -689,7 +697,7 @@ function renderRepetidasAmigoSolo() {
       </button>`;
     }).join("")}
   </div>
-  <div style="font-size:11px;color:#64748b;margin-top:8px">💡 Toque numa figurinha quando o amigo escolher.</div>`;
+  <div style="font-size:11px;color:#64748b;margin-top:8px">💡 Toque numa figurinha para reservar — o app pede o nome na primeira vez. Use "+ Novo amigo" para trocar de amigo.</div>`;
   return painelDar + painelReceber + chips;
 }
 
@@ -714,7 +722,7 @@ function renderRepetidasAmigo() {
       </button>`;
     }).join("")}
   </div>
-  <div style="font-size:11px;color:#64748b;margin-top:8px">💡 Toque numa figurinha quando o amigo escolher. Use "+ Novo amigo" para reservar para outra pessoa.</div>`;
+  <div style="font-size:11px;color:#64748b;margin-top:8px">💡 Toque numa figurinha para reservar — o app pede o nome na primeira vez. Use "+ Novo amigo" para trocar de amigo. Use "+ Novo amigo" para reservar para outra pessoa.</div>`;
   return painelDar + painelReceber + chips;
 }
 
@@ -733,7 +741,7 @@ function renderDeQuemTirar() {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
       <div style="font-size:13px;font-weight:700;color:#f59e0b">👁️ De quem tirar</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${amigoAtual ? `<span style="font-size:11px;font-weight:700;color:#f59e0b;border:1px solid #f59e0b50;padding:3px 8px;border-radius:8px">✏️ ${amigoAtual}</span>` : ""}
+        ${amigoAtual ? `<span style="font-size:11px;font-weight:700;color:#f59e0b;border:1px solid #f59e0b50;padding:3px 8px;border-radius:8px">👤 Para: ${amigoAtual}</span>` : ""}
         <button onclick="novoAmigo()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6">+ Novo amigo</button>
         ${doacaoStaging.length > 0 ? `<button onclick="limparDoacaoStaging()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Já peguei tudo</button>` : ""}
       </div>
@@ -748,9 +756,12 @@ function renderDeQuemTirar() {
           });
           const ehSemNome = amigo === "Sem nome";
           return `<div style="margin-bottom:10px;background:#1e293b;border-radius:10px;padding:10px">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-              <div style="font-size:12px;font-weight:800;color:${ehSemNome?"#f59e0b":"#e2e8f0"}">🤝 ${amigo}</div>
-              ${ehSemNome ? `<button onclick="renomearAmigo()" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">✏️ Nomear</button>` : ""}
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="font-size:12px;font-weight:800;color:${ehSemNome?"#f59e0b":"#e2e8f0"}">🤝 ${amigo}</div>
+                ${ehSemNome ? `<button onclick="renomearAmigo()" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">Identificar amigo</button>` : ""}
+              </div>
+              <button onclick="removerGrupoAmigo('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #ef4444;background:#ef444420;color:#ef4444">✕ Remover</button>
             </div>
             ${Object.entries(porFilho).map(([filho, itens]) => {
               const c = corNome(filho);
@@ -912,7 +923,15 @@ function processarImportacao() {
   }
 
   if (tipo === 'faltantes') {
-    // Amigo tem faltantes → eu tenho extras que posso dar
+    // Verifica se amigo já tem reservas
+    const jaTemReserva = doacaoStaging.some(it => it.amigo === nomeAmigo);
+    if (jaTemReserva) {
+      const opcao = confirm(`${nomeAmigo} já tem figurinhas reservadas.\n\nOK = substituir as reservas existentes\nCancelar = adicionar às existentes`);
+      if (opcao) {
+        doacaoStaging = doacaoStaging.filter(it => it.amigo !== nomeAmigo);
+        salvarDoacao();
+      }
+    }
     const paraReservar = [];
     linhas.forEach(({ siglaRaw, nums }) => {
       nums.forEach(num => {
