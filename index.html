@@ -287,6 +287,34 @@
   </div>
 </div>
 
+<!-- MODAL IMPORTAR -->
+<div id="modal-importar" style="display:none;position:fixed;inset:0;background:#000000cc;z-index:200;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#111827;border-radius:16px;padding:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;border:1px solid #334155">
+    <div style="font-size:16px;font-weight:800;color:#f59e0b;margin-bottom:12px">📥 Importar lista do amigo</div>
+
+    <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px">Nome do amigo</div>
+    <input id="importar-nome" type="text" placeholder="Ex: João" style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:8px 12px;color:#e2e8f0;font-size:13px;margin-bottom:12px;box-sizing:border-box">
+
+    <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:6px">Tipo de lista</div>
+    <div style="display:flex;gap:10px;margin-bottom:12px">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#e2e8f0;cursor:pointer">
+        <input type="radio" name="importar-tipo" value="faltantes" checked> Faltantes dele (quero dar)
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#e2e8f0;cursor:pointer">
+        <input type="radio" name="importar-tipo" value="repetidas"> Repetidas dele (quero receber)
+      </label>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px">Cole a lista aqui</div>
+    <textarea id="importar-texto" rows="10" placeholder="BRA: 1,3,5&#10;ARG: 2,7-9&#10;MEX: 4,6" style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:8px 12px;color:#e2e8f0;font-size:12px;font-family:monospace;resize:vertical;box-sizing:border-box"></textarea>
+
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button onclick="processarImportacao()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;border:none;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000">✅ Processar</button>
+      <button onclick="fecharImportar()" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid #334155;background:transparent;color:#94a3b8">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- BADGE SESSÃO -->
 <div id="badge-sessao" onclick="verResumoSessao()">📦 Ver resumo</div>
 
@@ -381,9 +409,13 @@ let mostrarTenho = true;
 let mostrarFaltam = true;
 let visaoFamilia = false;
 let visaoTrocaExtras = 'individual'; // 'individual' | 'familia'
-let doacaoStaging = []; // {selId, idx, sel, numLabel, origem}
-let ordemAlbum = false; // false = alfabética (sigla), true = ordem do álbum
+let doacaoStaging = []; // {selId, idx, sel, numLabel, origem, amigo}
+let amigoAtual = null; // nome do amigo em curso (dar)
+let receberStaging = []; // {selId, idx, sel, numLabel, paraFilho, amigo}
+let amigoReceber = null; // nome do amigo de quem vou receber
+let ordemAlbum = false;
 let submenuAberto = null;
+let modalImportarAberto = false;
 
 function setVisaoExtras(qual) { visaoTrocaExtras = qual; render(); }
 
@@ -500,6 +532,7 @@ function proximaOrigem(selId, idx) {
 }
 
 // Toque numa figurinha da lista "Família" — separa para retirada (sem descontar ainda)
+// Pede nome do amigo se não há amigo ativo, depois reserva
 function adicionarParaDoacao(selId, idx) {
   const sel = SELECOES.find(s => s.id === selId);
   const numLabel = sel.inicio !== undefined ? (sel.inicio+idx === 0 ? "00" : sel.inicio+idx) : idx + 1;
@@ -511,36 +544,58 @@ function adicionarParaDoacao(selId, idx) {
     setTimeout(() => toast.classList.remove("show"), 2000);
     return;
   }
-  doacaoStaging.push({ selId, idx, sel, numLabel, origem });
+  if (!amigoAtual) {
+    const nome = prompt("Para qual amigo é essa reserva?", "");
+    if (!nome || !nome.trim()) return;
+    amigoAtual = nome.trim();
+  }
+  doacaoStaging.push({ selId, idx, sel, numLabel, origem, amigo: amigoAtual });
   render();
 }
 
-// Confirma 1 item do painel "De quem tirar" — desconta de fato e remove da lista
+function novoAmigo() {
+  const nome = prompt("Nome do próximo amigo:", "");
+  if (!nome || !nome.trim()) return;
+  amigoAtual = nome.trim();
+  render();
+}
+
+function renomearAmigo() {
+  const nome = prompt("Nome do amigo para estas figurinhas:", "");
+  if (!nome || !nome.trim()) return;
+  doacaoStaging.forEach(item => {
+    if (item.amigo === "Sem nome") item.amigo = nome.trim();
+  });
+  amigoAtual = nome.trim();
+  render();
+}
+
 function confirmarItemDoacao(i) {
   const item = doacaoStaging[i];
   if (!item) return;
   subFigTroca(item.origem, item.selId, item.idx);
   doacaoStaging.splice(i, 1);
+  if (doacaoStaging.length === 0) amigoAtual = null;
   render();
 }
 
-// Confirma tudo de uma vez — "já peguei todas as figurinhas do bolinho"
 function limparDoacaoStaging() {
   doacaoStaging.forEach(item => {
-    if (state[item.origem][item.selId][item.idx] > 0) {
+    if (state[item.origem][item.selId][item.idx] > 0)
       state[item.origem][item.selId][item.idx]--;
-    }
   });
   salvarEstado();
   doacaoStaging = [];
+  amigoAtual = null;
   render();
 }
 
 function renderRepetidasAmigo() {
   const lista = listaRepetidasOrdenada();
-  const painel = renderDeQuemTirar();
+  const painelDar = renderDeQuemTirar();
+  const painelReceber = renderPraQuemDar();
   if (lista.length === 0) {
-    return painel + `<div style="color:#475569;font-size:12px;text-align:center;padding:14px 0">Nenhuma repetida livre no momento</div>`;
+    return painelDar + painelReceber + `<div style="color:#475569;font-size:12px;text-align:center;padding:14px 0">Nenhuma repetida livre no momento</div>`;
   }
   const chips = `<div class="troca-chips" style="margin-top:8px">
     ${lista.map(item => {
@@ -556,38 +611,280 @@ function renderRepetidasAmigo() {
       </button>`;
     }).join("")}
   </div>
-  <div style="font-size:11px;color:#64748b;margin-top:8px">💡 Toque numa figurinha quando o amigo escolher — ela entra na lista "De quem tirar" abaixo.</div>`;
-  return painel + chips;
+  <div style="font-size:11px;color:#64748b;margin-top:8px">💡 Toque numa figurinha quando o amigo escolher. Use "+ Novo amigo" para reservar para outra pessoa.</div>`;
+  return painelDar + painelReceber + chips;
 }
 
 function renderDeQuemTirar() {
-  const nomes = config.nomes;
-  const grupos = nomes.map(nome => ({
-    nome,
-    itens: doacaoStaging
-      .map((item, i) => ({ ...item, _i: i }))
-      .filter(it => it.origem === nome)
-  })).filter(g => g.itens.length > 0);
+  // Migra itens sem amigo para "Sem nome"
+  doacaoStaging.forEach(item => { if (!item.amigo) item.amigo = "Sem nome"; });
+
+  const porAmigo = {};
+  doacaoStaging.forEach((item, i) => {
+    if (!porAmigo[item.amigo]) porAmigo[item.amigo] = [];
+    porAmigo[item.amigo].push({ ...item, _i: i });
+  });
+  const amigos = Object.keys(porAmigo);
 
   return `<div style="background:#0f1923;border:1px solid #f59e0b50;border-radius:12px;padding:12px;margin-bottom:10px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
       <div style="font-size:13px;font-weight:700;color:#f59e0b">👁️ De quem tirar</div>
-      ${doacaoStaging.length > 0 ? `<button onclick="limparDoacaoStaging()" style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Já peguei tudo</button>` : ""}
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${amigoAtual ? `<span style="font-size:11px;font-weight:700;color:#f59e0b;border:1px solid #f59e0b50;padding:3px 8px;border-radius:8px">✏️ ${amigoAtual}</span>` : ""}
+        <button onclick="novoAmigo()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6">+ Novo amigo</button>
+        ${doacaoStaging.length > 0 ? `<button onclick="limparDoacaoStaging()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Já peguei tudo</button>` : ""}
+      </div>
     </div>
-    ${grupos.length === 0
+    ${amigos.length === 0
       ? `<div style="font-size:12px;color:#475569;text-align:center;padding:8px 0">Toque nas figurinhas abaixo quando o amigo escolher</div>`
-      : grupos.map(g => {
-          const c = corNome(g.nome);
-          return `<div style="margin-bottom:8px">
-            <div style="font-size:12px;font-weight:700;color:${c.accent};margin-bottom:4px">${g.nome}</div>
-            <div class="troca-chips">
-              ${g.itens.map(it => `<button onclick="confirmarItemDoacao(${it._i})" class="chip" style="background:${c.accent}15;color:${c.accent};border-color:${c.accent}40;cursor:pointer">
-                ${FLAGS[it.sel.id]} ${it.sel.sigla}-${it.numLabel} <span style="font-size:9px">✕</span>
-              </button>`).join("")}
+      : amigos.map(amigo => {
+          const porFilho = {};
+          porAmigo[amigo].forEach(it => {
+            if (!porFilho[it.origem]) porFilho[it.origem] = [];
+            porFilho[it.origem].push(it);
+          });
+          const ehSemNome = amigo === "Sem nome";
+          return `<div style="margin-bottom:10px;background:#1e293b;border-radius:10px;padding:10px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <div style="font-size:12px;font-weight:800;color:${ehSemNome?"#f59e0b":"#e2e8f0"}">🤝 ${amigo}</div>
+              ${ehSemNome ? `<button onclick="renomearAmigo()" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">✏️ Nomear</button>` : ""}
             </div>
+            ${Object.entries(porFilho).map(([filho, itens]) => {
+              const c = corNome(filho);
+              return `<div style="margin-bottom:6px">
+                <div style="font-size:11px;font-weight:700;color:${c.accent};margin-bottom:3px">${filho}</div>
+                <div class="troca-chips">
+                  ${itens.map(it => `<button onclick="confirmarItemDoacao(${it._i})" class="chip"
+                    style="background:${c.accent}15;color:${c.accent};border-color:${c.accent}40;cursor:pointer">
+                    ${FLAGS[it.sel.id]} ${it.sel.sigla}-${it.numLabel} <span style="font-size:9px">✕</span>
+                  </button>`).join("")}
+                </div>
+              </div>`;
+            }).join("")}
           </div>`;
         }).join("")}
   </div>`;
+}
+
+// ── PRA QUEM DAR (receber de amigo) ─────────────────────────────────────────
+
+function confirmarItemReceber(i) {
+  const item = receberStaging[i];
+  if (!item) return;
+  // Marca no álbum do filho destino
+  if (state[item.paraFilho][item.selId][item.idx] === 0) {
+    state[item.paraFilho][item.selId][item.idx] = 1;
+    salvarEstado();
+  }
+  receberStaging.splice(i, 1);
+  if (receberStaging.length === 0) amigoReceber = null;
+  render();
+}
+
+function receberTudo() {
+  receberStaging.forEach(item => {
+    if (state[item.paraFilho][item.selId][item.idx] === 0) {
+      state[item.paraFilho][item.selId][item.idx] = 1;
+    }
+  });
+  salvarEstado();
+  receberStaging = [];
+  amigoReceber = null;
+  render();
+}
+
+function renderPraQuemDar() {
+  const porAmigo = {};
+  receberStaging.forEach((item, i) => {
+    if (!porAmigo[item.amigo]) porAmigo[item.amigo] = [];
+    porAmigo[item.amigo].push({ ...item, _i: i });
+  });
+  const amigos = Object.keys(porAmigo);
+
+  return `<div style="background:#0f1923;border:1px solid #22c55e50;border-radius:12px;padding:12px;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+      <div style="font-size:13px;font-weight:700;color:#22c55e">📬 Pra quem dar (aguardando receber)</div>
+      ${receberStaging.length > 0 ? `<button onclick="receberTudo()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Recebi tudo</button>` : ""}
+    </div>
+    ${amigos.length === 0
+      ? `<div style="font-size:12px;color:#475569;text-align:center;padding:8px 0">Nenhuma figurinha aguardando — importe a lista de repetidas de um amigo</div>`
+      : amigos.map(amigo => {
+          const porFilho = {};
+          porAmigo[amigo].forEach(it => {
+            if (!porFilho[it.paraFilho]) porFilho[it.paraFilho] = [];
+            porFilho[it.paraFilho].push(it);
+          });
+          return `<div style="margin-bottom:10px;background:#1e293b;border-radius:10px;padding:10px">
+            <div style="font-size:12px;font-weight:800;color:#e2e8f0;margin-bottom:6px">🤝 ${amigo} vai me dar</div>
+            ${Object.entries(porFilho).map(([filho, itens]) => {
+              const c = corNome(filho);
+              return `<div style="margin-bottom:6px">
+                <div style="font-size:11px;font-weight:700;color:${c.accent};margin-bottom:3px">→ ${filho}</div>
+                <div class="troca-chips">
+                  ${itens.map(it => `<button onclick="confirmarItemReceber(${it._i})" class="chip"
+                    style="background:${c.accent}15;color:${c.accent};border-color:${c.accent}40;cursor:pointer">
+                    ${FLAGS[it.sel.id]} ${it.sel.sigla}-${it.numLabel} <span style="font-size:9px">✓</span>
+                  </button>`).join("")}
+                </div>
+              </div>`;
+            }).join("")}
+          </div>`;
+        }).join("")}
+  </div>`;
+}
+
+
+
+// Parser do formato padrão (stickercollector e similares):
+// "BRA: 1,3-5,7" → [{sigla:"BRA", nums:[1,3,4,5,7]}]
+function parsearListaAmigo(texto) {
+  const resultado = [];
+  const linhas = texto.split(/\n/);
+  linhas.forEach(linha => {
+    linha = linha.trim();
+    if (!linha) return;
+    // Aceita "BRA: 1,2,3" ou "BRA 1 2 3"
+    const match = linha.match(/^([A-Z][A-Z0-9\-]+)[:\s]+(.+)$/i);
+    if (!match) return;
+    const siglaRaw = match[1].toUpperCase().trim();
+    const numStr = match[2];
+    const nums = [];
+    numStr.split(/[,\s]+/).forEach(part => {
+      const range = part.match(/^(\d+)-(\d+)$/);
+      if (range) {
+        for (let n = parseInt(range[1]); n <= parseInt(range[2]); n++) nums.push(n);
+      } else {
+        const n = parseInt(part);
+        if (!isNaN(n)) nums.push(n);
+      }
+    });
+    if (nums.length > 0) resultado.push({ siglaRaw, nums });
+  });
+  return resultado;
+}
+
+// Mapeia sigla do parser para a seleção correta do app
+// FWC pode ser FWC-T, FWC-S ou FWC-H — resolve pelo número
+function resolverSel(siglaRaw, numGlobal) {
+  // Tenta match direto pela sigla
+  let sel = SELECOES.find(s => s.sigla === siglaRaw);
+  if (sel) return sel;
+  // FWC sem sufixo — resolve pelo número global
+  if (siglaRaw === 'FWC') {
+    const n = parseInt(numGlobal);
+    if (n <= 4) return SELECOES.find(s => s.id === 'FWC1');
+    if (n <= 8) return SELECOES.find(s => s.id === 'FWC2');
+    return SELECOES.find(s => s.id === 'FWC3');
+  }
+  return null;
+}
+
+// Converte número do formato importado para índice interno da seleção
+function numParaIdx(sel, num) {
+  if (sel.inicio !== undefined) {
+    return num - sel.inicio;
+  }
+  return num - 1;
+}
+
+// Abre modal de importação
+function abrirImportar() {
+  document.getElementById("modal-importar").style.display = "flex";
+}
+function fecharImportar() {
+  document.getElementById("modal-importar").style.display = "none";
+}
+
+// Processa a lista importada — detecta faltantes ou repetidas do amigo
+function processarImportacao() {
+  const texto = document.getElementById("importar-texto").value;
+  const nomeAmigo = document.getElementById("importar-nome").value.trim() || "Amigo";
+  const tipo = document.querySelector('input[name="importar-tipo"]:checked').value;
+  const linhas = parsearListaAmigo(texto);
+
+  if (linhas.length === 0) {
+    alert("Não encontrei figurinhas no texto. Verifique o formato.");
+    return;
+  }
+
+  if (tipo === 'faltantes') {
+    // Amigo tem faltantes → eu tenho extras que posso dar
+    const paraReservar = [];
+    linhas.forEach(({ siglaRaw, nums }) => {
+      nums.forEach(num => {
+        const sel = resolverSel(siglaRaw, num);
+        if (!sel) return;
+        const idx = numParaIdx(sel, num);
+        if (idx < 0 || idx >= sel.qtd) return;
+        const origem = proximaOrigem(sel.id, idx);
+        if (!origem) return; // não temos extra livre
+        const numLabel = sel.inicio !== undefined ? (sel.inicio+idx === 0 ? "00" : sel.inicio+idx) : idx+1;
+        paraReservar.push({ selId: sel.id, idx, sel, numLabel, origem, amigo: nomeAmigo });
+      });
+    });
+    if (paraReservar.length === 0) {
+      alert(`Nenhuma figurinha da lista de ${nomeAmigo} temos disponível para dar.`);
+      fecharImportar();
+      return;
+    }
+    // Reserva tudo no staging
+    paraReservar.forEach(item => doacaoStaging.push(item));
+    amigoAtual = nomeAmigo;
+    fecharImportar();
+    document.getElementById("importar-texto").value = "";
+    document.getElementById("importar-nome").value = "";
+    // Gera resumo
+    const resumo = paraReservar.map(it => `${FLAGS[it.sel.id]} ${it.sel.sigla}-${it.numLabel} (de ${it.origem})`).join("\n");
+    alert(`✅ ${paraReservar.length} figurinha(s) reservadas para ${nomeAmigo}!\n\n${resumo}`);
+    render();
+  } else {
+    // Amigo tem repetidas → eu preciso de alguma delas → vai para receberStaging
+    const nomes = config.nomes;
+    const paraReservar = [];
+    linhas.forEach(({ siglaRaw, nums }) => {
+      nums.forEach(num => {
+        const sel = resolverSel(siglaRaw, num);
+        if (!sel) return;
+        const idx = numParaIdx(sel, num);
+        if (idx < 0 || idx >= sel.qtd) return;
+        const numLabel = sel.inicio !== undefined ? (sel.inicio+idx === 0 ? "00" : sel.inicio+idx) : idx+1;
+        // Para cada filho que precisa, adiciona uma entrada
+        const precisam = nomes.filter(n => state[n][sel.id][idx] === 0);
+        precisam.forEach(filho => {
+          paraReservar.push({ selId: sel.id, idx, sel, numLabel, paraFilho: filho, amigo: nomeAmigo });
+        });
+      });
+    });
+    fecharImportar();
+    document.getElementById("importar-texto").value = "";
+    document.getElementById("importar-nome").value = "";
+    if (paraReservar.length === 0) {
+      alert(`Já temos todas as figurinhas que ${nomeAmigo} tem repetidas!`);
+      return;
+    }
+    // Adiciona ao receberStaging
+    paraReservar.forEach(item => receberStaging.push(item));
+    amigoReceber = nomeAmigo;
+    // Gera texto para mandar ao amigo
+    const porSel = {};
+    paraReservar.forEach(it => {
+      if (!porSel[it.sel.id]) porSel[it.sel.id] = { sel: it.sel, nums: new Set() };
+      porSel[it.sel.id].nums.add(it.numLabel);
+    });
+    let resumo = `🤝 ${nomeAmigo}, separa estas pra mim!\nCopa 2026 Panini\n\n`;
+    Object.values(porSel).forEach(g => {
+      resumo += `${FLAGS[g.sel.id]} ${g.sel.nome}: ${[...g.nums].join(", ")}\n`;
+    });
+    resumo += `\nObrigado! 😄`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(resumo).then(() => {
+        alert(`✅ ${Object.values(porSel).reduce((a,g)=>a+g.nums.size,0)} figurinha(s) reservadas de ${nomeAmigo}!\nTexto copiado — cole no WhatsApp para pedir ao amigo 😄`);
+      });
+    } else {
+      prompt("Copie o texto:", resumo);
+    }
+    render();
+  }
 }
 
 function exportarRepetidasAmigoTexto() {
@@ -1822,6 +2119,7 @@ function renderTrocas() {
 
   return `
     <div class="info-box">💡 Mostra extras que um colecionador pode dar ao outro. <strong style="color:#f59e0b">Troquem entre vocês primeiro!</strong></div>
+    <button onclick="abrirImportar()" style="width:100%;margin-bottom:10px;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">📥 Importar lista de amigo</button>
     ${cardsHtml}
     ${renderOrdemToggle()}
     <div class="extras-card">
