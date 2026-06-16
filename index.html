@@ -287,6 +287,18 @@
   </div>
 </div>
 
+<!-- MODAL AMIGO -->
+<div id="modal-amigo" style="display:none;position:fixed;inset:0;background:#000000cc;z-index:200;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#111827;border-radius:16px;padding:20px;width:100%;max-width:380px;border:1px solid #334155">
+    <div id="modal-amigo-titulo" style="font-size:14px;font-weight:800;color:#f59e0b;margin-bottom:14px"></div>
+    <div id="modal-amigo-btns"></div>
+    <button onclick="document.getElementById('modal-amigo').style.display='none'"
+      style="width:100%;padding:8px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid #334155;background:transparent;color:#64748b;margin-top:4px">
+      Cancelar
+    </button>
+  </div>
+</div>
+
 <!-- MODAL IMPORTAR -->
 <div id="modal-importar" style="display:none;position:fixed;inset:0;background:#000000cc;z-index:200;align-items:center;justify-content:center;padding:20px">
   <div style="background:#111827;border-radius:16px;padding:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;border:1px solid #334155">
@@ -532,7 +544,7 @@ function proximaOrigem(selId, idx) {
 }
 
 // Toque numa figurinha da lista "Família" — separa para retirada (sem descontar ainda)
-// Pede nome do amigo se não há amigo ativo, depois reserva
+// Pede nome do amigo via modal com lista de amigos ativos
 function adicionarParaDoacao(selId, idx) {
   const sel = SELECOES.find(s => s.id === selId);
   const numLabel = sel.inicio !== undefined ? (sel.inicio+idx === 0 ? "00" : sel.inicio+idx) : idx + 1;
@@ -544,11 +556,53 @@ function adicionarParaDoacao(selId, idx) {
     setTimeout(() => toast.classList.remove("show"), 2000);
     return;
   }
-  if (!amigoAtual) {
-    const nome = prompt("Para qual amigo é essa reserva?", "");
+  // Amigos já ativos no staging
+  const amigosAtivos = [...new Set(doacaoStaging.map(it => it.amigo).filter(a => a && a !== "Sem nome"))];
+
+  if (amigosAtivos.length === 0) {
+    // Nenhum amigo ainda — pede nome direto
+    const nome = prompt(`Para qual amigo é ${FLAGS[selId]} ${sel.sigla}-${numLabel}?`, "");
     if (!nome || !nome.trim()) return;
     amigoAtual = nome.trim();
+    doacaoStaging.push({ selId, idx, sel, numLabel, origem, amigo: amigoAtual });
+    salvarDoacao();
+    render();
+    return;
   }
+
+  // Tem amigos ativos — mostra modal de seleção
+  document.getElementById("modal-amigo-titulo").textContent = `${FLAGS[selId]} ${sel.sigla}-${numLabel} → para quem?`;
+  const btns = document.getElementById("modal-amigo-btns");
+  btns.innerHTML = amigosAtivos.map(amigo => {
+    const ativo = amigo === amigoAtual;
+    return `<button onclick="selecionarAmigoModal('${selId}',${idx},'${amigo.replace(/'/g,"\\'")}','${numLabel}','${origem}')"
+      style="width:100%;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;text-align:left;
+      border:1px solid ${ativo?'#f59e0b':'#334155'};background:${ativo?'#f59e0b20':'#1e293b'};color:${ativo?'#f59e0b':'#e2e8f0'};margin-bottom:6px">
+      🤝 ${amigo}${ativo?' <span style="font-size:10px;color:#f59e0b">(ativo)</span>':""}
+    </button>`;
+  }).join("") + `<button onclick="novoAmigoModal('${selId}',${idx},'${numLabel}','${origem}')"
+    style="width:100%;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;text-align:left;
+    border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6;margin-bottom:6px">
+    + Novo amigo
+  </button>`;
+  document.getElementById("modal-amigo").style.display = "flex";
+}
+
+function selecionarAmigoModal(selId, idx, amigo, numLabel, origem) {
+  document.getElementById("modal-amigo").style.display = "none";
+  const sel = SELECOES.find(s => s.id === selId);
+  amigoAtual = amigo;
+  doacaoStaging.push({ selId, idx, sel, numLabel, origem, amigo });
+  salvarDoacao();
+  render();
+}
+
+function novoAmigoModal(selId, idx, numLabel, origem) {
+  document.getElementById("modal-amigo").style.display = "none";
+  const sel = SELECOES.find(s => s.id === selId);
+  const nome = prompt("Nome do novo amigo:", "");
+  if (!nome || !nome.trim()) return;
+  amigoAtual = nome.trim();
   doacaoStaging.push({ selId, idx, sel, numLabel, origem, amigo: amigoAtual });
   salvarDoacao();
   render();
