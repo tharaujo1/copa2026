@@ -906,24 +906,112 @@ function renderPraQuemDar() {
 
 // Parser do formato padrão (stickercollector e similares):
 // "BRA: 1,3-5,7" → [{sigla:"BRA", nums:[1,3,4,5,7]}]
+// Mapa de nomes completos em português → sigla do app
+const NOME_PARA_SIGLA = {
+  "africa do sul": "RSA", "africa sul": "RSA",
+  "alemanha": "GER",
+  "arabia saudita": "KSA", "arabia": "KSA",
+  "argelia": "ALG",
+  "argentina": "ARG",
+  "australia": "AUS",
+  "austria": "AUT",
+  "belgica": "BEL",
+  "bosnia": "BIH", "bosnia herzegovima": "BIH", "bosnia-herzegovima": "BIH",
+  "brasil": "BRA",
+  "cabo verde": "CPV",
+  "canada": "CAN",
+  "catar": "QAT", "qatar": "QAT",
+  "cc": "CC", "cc (especial)": "CC",
+  "colombia": "COL",
+  "coreia do sul": "KOR", "coreia": "KOR",
+  "costa do marfim": "CIV", "cote divoire": "CIV",
+  "croacia": "CRO",
+  "curcao": "CUW", "curacao": "CUW", "curaçao": "CUW",
+  "egito": "EGY",
+  "equador": "ECU",
+  "escocia": "SCO",
+  "espanha": "ESP",
+  "estados unidos": "USA", "eua": "USA",
+  "fwc historia": "FWC3", "fwc troféu": "FWC1", "fwc sedes": "FWC2", "fwc": "FWC",
+  "franca": "FRA", "frança": "FRA",
+  "gana": "GHA",
+  "holanda": "NED", "nederland": "NED", "paises baixos": "NED",
+  "indonesia": "IDN",
+  "ira": "IRN", "ira islamic republic": "IRN",
+  "iraque": "IRQ",
+  "japao": "JPN", "japão": "JPN",
+  "jordania": "JOR",
+  "marrocos": "MAR",
+  "mexico": "MEX", "méxico": "MEX",
+  "nigeria": "NGA",
+  "noruega": "NOR",
+  "nova zelandia": "NZL",
+  "panama": "PAN", "panamá": "PAN",
+  "paraguai": "PAR",
+  "polonia": "POL",
+  "portugal": "POR",
+  "rep tcheca": "CZE", "republica tcheca": "CZE", "república tcheca": "CZE", "tchecia": "CZE",
+  "rep democratica congo": "COD", "congo": "COD",
+  "arabia saudita": "KSA",
+  "senegal": "SEN",
+  "suecia": "SWE", "suécia": "SWE",
+  "suica": "SUI", "suíça": "SUI",
+  "tunisia": "TUN", "tunísia": "TUN",
+  "turquia": "TUR",
+  "uruguai": "URU",
+  "uzbequistao": "UZB", "uzbequistão": "UZB",
+  "escocia": "SCO", "escócia": "SCO",
+};
+
+function normalizarTexto(t) {
+  return t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
 function parsearListaAmigo(texto) {
   const resultado = [];
   const linhas = texto.split(/\n/);
   linhas.forEach(linha => {
     linha = linha.trim();
     if (!linha) return;
-    // Aceita "BRA: 1,2,3" ou "BRA 1 2 3"
-    const match = linha.match(/^([A-Z][A-Z0-9\-]+)[:\s]+(.+)$/i);
-    if (!match) return;
-    const siglaRaw = match[1].toUpperCase().trim();
-    const numStr = match[2];
+    // Remove emojis e caracteres especiais do início
+    const linhaSemEmoji = linha.replace(/[\u{1F000}-\u{1FFFF}|\u{2600}-\u{27FF}|\u{1F300}-\u{1F9FF}|\uFE0F|\u200D]/gu, "").trim();
+    if (!linhaSemEmoji) return;
+
+    let siglaRaw = null;
+    let numStr = null;
+
+    // Formato 1: sigla curta "BRA: 1,2,3" ou "BRA 1,2,3"
+    const matchSigla = linhaSemEmoji.match(/^([A-Z][A-Z0-9\-]{1,4})[:\s]+(.+)$/i);
+    if (matchSigla && matchSigla[1].length <= 5) {
+      siglaRaw = matchSigla[1].toUpperCase().trim();
+      numStr = matchSigla[2];
+    } else {
+      // Formato 2: nome completo "Brasil: 1,2,3" ou "África do Sul: 03, 04"
+      const matchNome = linhaSemEmoji.match(/^(.+?):\s*(.+)$/);
+      if (matchNome) {
+        const nomeNorm = normalizarTexto(matchNome[1]);
+        const siglaMapeada = NOME_PARA_SIGLA[nomeNorm];
+        if (siglaMapeada) {
+          siglaRaw = siglaMapeada;
+          numStr = matchNome[2];
+        }
+      }
+    }
+
+    if (!siglaRaw || !numStr) return;
+
     const nums = [];
+    // Suporta: "1,2,3" / "1-3" / "05(x3)" / "05 (x3)" / "05(×3)"
     numStr.split(/[,\s]+/).forEach(part => {
-      const range = part.match(/^(\d+)-(\d+)$/);
+      part = part.trim();
+      if (!part) return;
+      // Remove quantidade entre parênteses ex: "05(x3)" → pega só o número, ignora a qtd
+      const semQtd = part.replace(/\([x×]\d+\)/gi, "").trim();
+      const range = semQtd.match(/^(\d+)-(\d+)$/);
       if (range) {
         for (let n = parseInt(range[1]); n <= parseInt(range[2]); n++) nums.push(n);
       } else {
-        const n = parseInt(part);
+        const n = parseInt(semQtd);
         if (!isNaN(n)) nums.push(n);
       }
     });
@@ -945,6 +1033,9 @@ function resolverSel(siglaRaw, numGlobal) {
     if (n <= 8) return SELECOES.find(s => s.id === 'FWC2');
     return SELECOES.find(s => s.id === 'FWC3');
   }
+  // Tenta via id
+  sel = SELECOES.find(s => s.id === siglaRaw);
+  if (sel) return sel;
   return null;
 }
 
