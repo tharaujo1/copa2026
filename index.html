@@ -1747,6 +1747,11 @@ function fecharModal() {
 
 function confirmarFigurinhaSessao(selId, idx, para, numLabel, selNome, flag) {
   fecharModal();
+  // Atualiza álbum imediatamente — decisão da próxima figurinha já considera o estado real
+  if (state[para][selId][idx] === 0) {
+    state[para][selId][idx] = 1;
+    salvarEstado();
+  }
   sessaoTroca.push({ selId, idx, para, numLabel, selNome, flag });
   salvarSessao();
   render();
@@ -1764,12 +1769,10 @@ function verResumoSessao() {
 }
 
 function confirmarSessao() {
-  // Aplica todas as figurinhas da sessão no álbum
-  sessaoTroca.forEach(item => {
-    if (state[item.para][item.selId][item.idx] < 99) {
-      state[item.para][item.selId][item.idx]++;
-    }
-  });
+  // Álbum já foi atualizado figurinha a figurinha — apenas limpa a sessão
+  salvarEstado();
+  localStorage.removeItem("copa2026-sessao");
+  sessaoTroca = [];
   salvarEstado();
   localStorage.removeItem("copa2026-sessao");
   sessaoTroca = [];
