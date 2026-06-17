@@ -862,6 +862,14 @@ function receberTudo() {
   render();
 }
 
+function removerGrupoReceber(amigo) {
+  if (!confirm(`Remover todas as figurinhas aguardando de ${amigo}?`)) return;
+  receberStaging = receberStaging.filter(item => item.amigo !== amigo);
+  if (amigoReceber === amigo) amigoReceber = null;
+  salvarReceber();
+  render();
+}
+
 function renderPraQuemDar() {
   const porAmigo = {};
   receberStaging.forEach((item, i) => {
@@ -884,7 +892,10 @@ function renderPraQuemDar() {
             porFilho[it.paraFilho].push(it);
           });
           return `<div style="margin-bottom:10px;background:#1e293b;border-radius:10px;padding:10px">
-            <div style="font-size:12px;font-weight:800;color:#e2e8f0;margin-bottom:6px">🤝 ${amigo} vai me dar</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+              <div style="font-size:12px;font-weight:800;color:#e2e8f0">🤝 ${amigo} vai me dar</div>
+              <button onclick="removerGrupoReceber('${amigo.replace(/'/g,"\\'")})'" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #ef4444;background:#ef444420;color:#ef4444">✕ Remover</button>
+            </div>
             ${Object.entries(porFilho).map(([filho, itens]) => {
               const c = corNome(filho);
               return `<div style="margin-bottom:6px">
