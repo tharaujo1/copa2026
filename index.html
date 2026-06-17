@@ -855,7 +855,7 @@ function renderDeQuemTirar() {
           return `<div style="margin-bottom:10px;background:#1e293b;border-radius:10px;padding:10px">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
               <div style="display:flex;align-items:center;gap:8px">
-                <div style="font-size:12px;font-weight:800;color:${ehSemNome?"#f59e0b":"#e2e8f0"}">🤝 ${amigo}</div>
+                <div style="font-size:12px;font-weight:800;color:${ehSemNome?"#f59e0b":"#e2e8f0"}">🤝 ${amigo} <span style="font-size:10px;color:#64748b">(${porAmigo[amigo].length})</span></div>
                 ${ehSemNome ? `<button onclick="renomearAmigo()" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">Identificar amigo</button>` : ""}
               </div>
               <div style="display:flex;gap:4px">
@@ -948,7 +948,7 @@ function renderPraQuemDar() {
           });
           return `<div style="margin-bottom:10px;background:#1e293b;border-radius:10px;padding:10px">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
-              <div style="font-size:12px;font-weight:800;color:#e2e8f0">🤝 ${amigo} vai me dar</div>
+              <div style="font-size:12px;font-weight:800;color:#e2e8f0">🤝 ${amigo} vai me dar <span style="font-size:10px;color:#64748b">(${porAmigo[amigo].length})</span></div>
               <div style="display:flex;gap:4px">
                 <button onclick="exportarGrupoReceber(this.dataset.amigo)" data-amigo="${amigo}" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6">📋 Exportar</button>
                 <button onclick="removerGrupoReceber(this.dataset.amigo)" data-amigo="${amigo}" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #ef4444;background:#ef444420;color:#ef4444">✕ Remover</button>
