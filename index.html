@@ -678,7 +678,7 @@ function renderDeQuemTirarSolo() {
       <div style="font-size:13px;font-weight:700;color:#f59e0b">👁️ De quem tirar</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${amigoAtual ? `<span style="font-size:11px;font-weight:700;color:#f59e0b;border:1px solid #f59e0b50;padding:3px 8px;border-radius:8px">👤 Para: ${amigoAtual}</span>` : ""}
-        <button onclick="novoAmigo()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6">+ Novo amigo</button>
+        ${doacaoStaging.length > 0 ? `<button onclick="novoAmigo()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6">+ Novo amigo</button>` : ""}
         ${doacaoStaging.length > 0 ? `<button onclick="limparDoacaoStaging()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Já peguei tudo</button>` : ""}
       </div>
     </div>
@@ -801,7 +801,7 @@ function renderDeQuemTirar() {
       <div style="font-size:13px;font-weight:700;color:#f59e0b">👁️ De quem tirar</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${amigoAtual ? `<span style="font-size:11px;font-weight:700;color:#f59e0b;border:1px solid #f59e0b50;padding:3px 8px;border-radius:8px">👤 Para: ${amigoAtual}</span>` : ""}
-        <button onclick="novoAmigo()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6">+ Novo amigo</button>
+        ${doacaoStaging.length > 0 ? `<button onclick="novoAmigo()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6">+ Novo amigo</button>` : ""}
         ${doacaoStaging.length > 0 ? `<button onclick="limparDoacaoStaging()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Já peguei tudo</button>` : ""}
       </div>
     </div>
@@ -827,7 +827,7 @@ function renderDeQuemTirar() {
               return `<div style="margin-bottom:6px">
                 <div style="font-size:11px;font-weight:700;color:${c.accent};margin-bottom:3px">${filho}</div>
                 <div class="troca-chips">
-                  ${itens.map(it => `
+                  ${[...itens].sort((a,b) => a.sel.sigla.localeCompare(b.sel.sigla) || a.numLabel - b.numLabel).map(it => `
                     <span class="chip" style="background:${c.accent}15;color:${c.accent};border-color:${c.accent}40;display:inline-flex;align-items:center;gap:4px">
                       <span style="font-size:11px;font-weight:600">${FLAGS[it.sel.id]} ${it.sel.sigla}-${it.numLabel}</span>
                       <button onclick="confirmarItemDoacao(${it._i})" title="Entreguei" style="background:#22c55e30;border:none;color:#22c55e;cursor:pointer;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:900">✓</button>
@@ -915,7 +915,7 @@ function renderPraQuemDar() {
               return `<div style="margin-bottom:6px">
                 <div style="font-size:11px;font-weight:700;color:${c.accent};margin-bottom:3px">→ ${filho}</div>
                 <div class="troca-chips">
-                  ${itens.filter(it => it.sel).map(it => `
+                  ${itens.filter(it => it.sel).sort((a,b) => a.sel.sigla.localeCompare(b.sel.sigla) || a.numLabel - b.numLabel).map(it => `
                     <span class="chip" style="background:${c.accent}15;color:${c.accent};border-color:${c.accent}40;display:inline-flex;align-items:center;gap:4px">
                       <button onclick="confirmarItemReceber(${it._i})" style="background:none;border:none;color:${c.accent};cursor:pointer;padding:0;font-size:11px;font-weight:600">
                         ${FLAGS[it.sel.id]} ${it.sel.sigla}-${it.numLabel} <span style="font-size:9px">✓</span>
@@ -2543,7 +2543,7 @@ function renderTrocas() {
       ${cardsHtml}
     </div>` : "";
 
-  return reservasHtml + extrasAmigosHtml + irmaosHtml;
+  return irmaosHtml + extrasAmigosHtml + reservasHtml;
 }
 
 // ── STATS ────────────────────────────────────────────────────────────────────
@@ -2741,7 +2741,9 @@ function subFigTroca(nome, selId, idx) {
 }
 
 function forcarAtualizacao() {
-  window.location.reload(true);
+  const url = new URL(window.location.href);
+  url.searchParams.set('v', Date.now());
+  window.location.href = url.toString();
 }
 
 function pedirReset()   { confirmandoReset = true;  renderConteudo(); }
