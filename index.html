@@ -890,7 +890,7 @@ function renderPraQuemDar() {
               return `<div style="margin-bottom:6px">
                 <div style="font-size:11px;font-weight:700;color:${c.accent};margin-bottom:3px">→ ${filho}</div>
                 <div class="troca-chips">
-                  ${itens.map(it => `<button onclick="confirmarItemReceber(${it._i})" class="chip"
+                  ${itens.filter(it => it.sel).map(it => `<button onclick="confirmarItemReceber(${it._i})" class="chip"
                     style="background:${c.accent}15;color:${c.accent};border-color:${c.accent}40;cursor:pointer">
                     ${FLAGS[it.sel.id]} ${it.sel.sigla}-${it.numLabel} <span style="font-size:9px">✓</span>
                   </button>`).join("")}
@@ -1005,14 +1005,16 @@ function parsearListaAmigo(texto) {
     numStr.split(/[,\s]+/).forEach(part => {
       part = part.trim();
       if (!part) return;
-      // Remove quantidade entre parênteses ex: "05(x3)" → pega só o número, ignora a qtd
+      // Captura quantidade ex: "05(x3)" → num=5, qtd=3
+      const qtdMatch = part.match(/\([x×](\d+)\)/i);
+      const qtd = qtdMatch ? parseInt(qtdMatch[1]) : 1;
       const semQtd = part.replace(/\([x×]\d+\)/gi, "").trim();
       const range = semQtd.match(/^(\d+)-(\d+)$/);
       if (range) {
-        for (let n = parseInt(range[1]); n <= parseInt(range[2]); n++) nums.push(n);
+        for (let n = parseInt(range[1]); n <= parseInt(range[2]); n++) nums.push({ n, qtd: 1 });
       } else {
         const n = parseInt(semQtd);
-        if (!isNaN(n)) nums.push(n);
+        if (!isNaN(n)) nums.push({ n, qtd });
       }
     });
     if (nums.length > 0) resultado.push({ siglaRaw, nums });
@@ -1079,13 +1081,13 @@ function processarImportacao() {
     }
     const paraReservar = [];
     linhas.forEach(({ siglaRaw, nums }) => {
-      nums.forEach(num => {
+      nums.forEach(({ n: num }) => {
         const sel = resolverSel(siglaRaw, num);
         if (!sel) return;
         const idx = numParaIdx(sel, num);
         if (idx < 0 || idx >= sel.qtd) return;
         const origem = proximaOrigem(sel.id, idx);
-        if (!origem) return; // não temos extra livre
+        if (!origem) return;
         const numLabel = sel.inicio !== undefined ? (sel.inicio+idx === 0 ? "00" : sel.inicio+idx) : idx+1;
         paraReservar.push({ selId: sel.id, idx, sel, numLabel, origem, amigo: nomeAmigo });
       });
@@ -1098,6 +1100,7 @@ function processarImportacao() {
     // Reserva tudo no staging
     paraReservar.forEach(item => doacaoStaging.push(item));
     amigoAtual = nomeAmigo;
+    visaoTrocaExtras = 'familia';
     salvarDoacao();
     fecharImportar();
     document.getElementById("importar-texto").value = "";
@@ -1111,15 +1114,27 @@ function processarImportacao() {
     const nomes = config.nomes;
     const paraReservar = [];
     linhas.forEach(({ siglaRaw, nums }) => {
-      nums.forEach(num => {
+      nums.forEach(({ n: num, qtd: qtdDisponivel }) => {
         const sel = resolverSel(siglaRaw, num);
         if (!sel) return;
         const idx = numParaIdx(sel, num);
         if (idx < 0 || idx >= sel.qtd) return;
         const numLabel = sel.inicio !== undefined ? (sel.inicio+idx === 0 ? "00" : sel.inicio+idx) : idx+1;
-        // Para cada filho que precisa, adiciona uma entrada
-        const precisam = nomes.filter(n => state[n][sel.id][idx] === 0);
-        precisam.forEach(filho => {
+        // Filhos que precisam, ordenados por prioridade (menos figurinhas naquela seleção → mais no álbum total)
+        const precisam = nomes
+          .filter(n => state[n][sel.id][idx] === 0)
+          .sort((a, b) => {
+            const temSelA = state[a][sel.id].filter(q => q >= 1).length;
+            const temSelB = state[b][sel.id].filter(q => q >= 1).length;
+            if (temSelA !== temSelB) return temSelA - temSelB;
+            const totalA = SELECOES.reduce((acc, s) => acc + state[a][s.id].filter(q => q >= 1).length, 0);
+            const totalB = SELECOES.reduce((acc, s) => acc + state[b][s.id].filter(q => q >= 1).length, 0);
+            if (totalA !== totalB) return totalA - totalB;
+            return a.localeCompare(b);
+          });
+        // Reserva só até a quantidade disponível do amigo
+        const qtdParaReservar = Math.min(qtdDisponivel, precisam.length);
+        precisam.slice(0, qtdParaReservar).forEach(filho => {
           paraReservar.push({ selId: sel.id, idx, sel, numLabel, paraFilho: filho, amigo: nomeAmigo });
         });
       });
@@ -1134,6 +1149,7 @@ function processarImportacao() {
     // Adiciona ao receberStaging
     paraReservar.forEach(item => receberStaging.push(item));
     amigoReceber = nomeAmigo;
+    visaoTrocaExtras = 'familia'; // muda para família para mostrar o painel
     salvarReceber();
     // Gera texto para mandar ao amigo
     const porSel = {};
