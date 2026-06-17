@@ -1769,7 +1769,12 @@ function verResumoSessao() {
 }
 
 function confirmarSessao() {
-  // Álbum já foi atualizado figurinha a figurinha — apenas limpa a sessão
+  // Aplica figurinhas que ainda não foram marcadas (compatibilidade com sessões antigas)
+  sessaoTroca.forEach(item => {
+    if (state[item.para][item.selId][item.idx] === 0) {
+      state[item.para][item.selId][item.idx] = 1;
+    }
+  });
   salvarEstado();
   localStorage.removeItem("copa2026-sessao");
   sessaoTroca = [];
@@ -1786,7 +1791,14 @@ function confirmarSessao() {
 }
 
 function cancelarSessao() {
-  if (!confirm("Cancelar a sessão? As figurinhas não serão adicionadas ao álbum.")) return;
+  if (!confirm("Cancelar a sessão? As figurinhas serão removidas do álbum.")) return;
+  // Reverte o álbum — desfaz o que foi marcado na sessão
+  sessaoTroca.forEach(item => {
+    if (state[item.para][item.selId][item.idx] === 1) {
+      state[item.para][item.selId][item.idx] = 0;
+    }
+  });
+  salvarEstado();
   localStorage.removeItem("copa2026-sessao");
   sessaoTroca = [];
   atualizarBadgeSessao();
