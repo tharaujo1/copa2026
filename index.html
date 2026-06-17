@@ -305,7 +305,8 @@
     <div style="font-size:16px;font-weight:800;color:#f59e0b;margin-bottom:12px">📥 Importar lista do amigo</div>
 
     <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px">Nome do amigo</div>
-    <input id="importar-nome" type="text" placeholder="Ex: João (opcional)" style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:8px 12px;color:#e2e8f0;font-size:13px;margin-bottom:12px;box-sizing:border-box">
+    <div id="importar-amigos-ativos"></div>
+    <input id="importar-nome" type="text" placeholder="Digite o nome do amigo" style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:8px 12px;color:#e2e8f0;font-size:13px;margin-bottom:12px;box-sizing:border-box">
 
     <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:6px">Tipo de lista</div>
     <div style="display:flex;gap:10px;margin-bottom:12px">
@@ -721,11 +722,7 @@ function renderDeQuemTirarSolo() {
   return `<div style="background:#0f1923;border:1px solid #f59e0b50;border-radius:12px;padding:12px;margin-bottom:10px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
       <div style="font-size:13px;font-weight:700;color:#f59e0b">👁️ De quem tirar</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${amigoAtual ? `<span style="font-size:11px;font-weight:700;color:#f59e0b;border:1px solid #f59e0b50;padding:3px 8px;border-radius:8px">👤 Para: ${amigoAtual}</span>` : ""}
-        ${doacaoStaging.length > 0 ? `<button onclick="novoAmigo()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6">+ Novo amigo</button>` : ""}
-        ${doacaoStaging.length > 0 ? `<button onclick="limparDoacaoStaging()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Já peguei tudo</button>` : ""}
-      </div>
+      ${doacaoStaging.length > 0 ? `<button onclick="limparDoacaoStaging()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Já peguei tudo</button>` : ""}
     </div>
     ${amigos.length === 0
       ? `<div style="font-size:12px;color:#475569;text-align:center;padding:8px 0">Toque nas figurinhas abaixo quando o amigo escolher</div>`
@@ -733,7 +730,7 @@ function renderDeQuemTirarSolo() {
           const ehSemNome = amigo === "Sem nome";
           return `<div style="margin-bottom:8px;background:#1e293b;border-radius:10px;padding:10px">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-              <div style="font-size:12px;font-weight:800;color:${ehSemNome?"#f59e0b":"#e2e8f0"}">🤝 ${amigo}</div>
+              <div style="font-size:12px;font-weight:800;color:${ehSemNome?"#f59e0b":"#e2e8f0"}">🤝 ${amigo} <span style="font-size:10px;color:#64748b">(${porAmigo[amigo].length})</span></div>
               ${ehSemNome ? `<button onclick="renomearAmigo()" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">Identificar amigo</button>` : ""}
             </div>
             <div class="troca-chips">
@@ -764,7 +761,7 @@ function renderPraQuemDarSolo() {
     ${amigos.length === 0
       ? `<div style="font-size:12px;color:#475569;text-align:center;padding:8px 0">Nenhuma figurinha aguardando — importe a lista de repetidas de um amigo</div>`
       : amigos.map(amigo => `<div style="margin-bottom:8px;background:#1e293b;border-radius:10px;padding:10px">
-          <div style="font-size:12px;font-weight:800;color:#e2e8f0;margin-bottom:6px">🤝 ${amigo} vai me dar</div>
+          <div style="font-size:12px;font-weight:800;color:#e2e8f0">🤝 ${amigo} vai me dar <span style="font-size:10px;color:#64748b">(${porAmigo[amigo].length})</span></div>
           <div class="troca-chips">
             ${porAmigo[amigo].map(it => `<button onclick="confirmarItemReceber(${it._i})" class="chip"
               style="background:#22c55e15;color:#22c55e;border-color:#22c55e40;cursor:pointer">
@@ -844,11 +841,7 @@ function renderDeQuemTirar() {
   return `<div style="background:#0f1923;border:1px solid #f59e0b50;border-radius:12px;padding:12px;margin-bottom:10px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
       <div style="font-size:13px;font-weight:700;color:#f59e0b">👁️ De quem tirar</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${amigoAtual ? `<span style="font-size:11px;font-weight:700;color:#f59e0b;border:1px solid #f59e0b50;padding:3px 8px;border-radius:8px">👤 Para: ${amigoAtual}</span>` : ""}
-        ${doacaoStaging.length > 0 ? `<button onclick="novoAmigo()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6">+ Novo amigo</button>` : ""}
-        ${doacaoStaging.length > 0 ? `<button onclick="limparDoacaoStaging()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Já peguei tudo</button>` : ""}
-      </div>
+      ${doacaoStaging.length > 0 ? `<button onclick="limparDoacaoStaging()" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Já peguei tudo</button>` : ""}
     </div>
     ${amigos.length === 0
       ? `<div style="font-size:12px;color:#475569;text-align:center;padding:8px 0">Toque nas figurinhas abaixo quando o amigo escolher</div>`
@@ -1139,6 +1132,23 @@ function numParaIdx(sel, num) {
 // Abre modal de importação
 function abrirImportar() {
   document.getElementById("modal-importar").style.display = "flex";
+  document.getElementById("importar-nome").value = "";
+  // Mostra amigos com reservas ativas
+  const amigosAtivos = [...new Set([
+    ...doacaoStaging.map(it => it.amigo),
+    ...receberStaging.map(it => it.amigo)
+  ].filter(a => a && a !== "Sem nome"))];
+  const container = document.getElementById("importar-amigos-ativos");
+  if (amigosAtivos.length > 0) {
+    container.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+      ${amigosAtivos.map(amigo => `<button onclick="document.getElementById('importar-nome').value='${amigo.replace(/'/g,"\\'")}'"
+        style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">
+        🤝 ${amigo}
+      </button>`).join("")}
+    </div>`;
+  } else {
+    container.innerHTML = "";
+  }
 }
 function fecharImportar() {
   document.getElementById("modal-importar").style.display = "none";
@@ -1148,7 +1158,12 @@ function fecharImportar() {
 function processarImportacao() {
   const texto = document.getElementById("importar-texto").value;
   const nomeDigitado = document.getElementById("importar-nome").value.trim();
-  const nomeAmigo = nomeDigitado || amigoAtual || amigoReceber || "Amigo";
+  if (!nomeDigitado) {
+    alert("Por favor, informe o nome do amigo.");
+    document.getElementById("importar-nome").focus();
+    return;
+  }
+  const nomeAmigo = nomeDigitado;
   const tipo = document.querySelector('input[name="importar-tipo"]:checked').value;
   const linhas = parsearListaAmigo(texto);
 
@@ -1208,9 +1223,12 @@ function processarImportacao() {
         const idx = numParaIdx(sel, num);
         if (idx < 0 || idx >= sel.qtd) return;
         const numLabel = sel.inicio !== undefined ? (sel.inicio+idx === 0 ? "00" : sel.inicio+idx) : idx+1;
-        // Filhos que precisam, ordenados por prioridade (menos figurinhas naquela seleção → mais no álbum total)
+        // Filhos que precisam, excluindo os que já têm reserva no staging para esta figurinha
+        const jaReservados = receberStaging
+          .filter(it => it.selId === sel.id && it.idx === idx && it.amigo === nomeAmigo)
+          .map(it => it.paraFilho);
         const precisam = nomes
-          .filter(n => state[n][sel.id][idx] === 0)
+          .filter(n => state[n][sel.id][idx] === 0 && !jaReservados.includes(n))
           .sort((a, b) => {
             const temSelA = state[a][sel.id].filter(q => q >= 1).length;
             const temSelB = state[b][sel.id].filter(q => q >= 1).length;
@@ -1231,8 +1249,17 @@ function processarImportacao() {
     document.getElementById("importar-texto").value = "";
     document.getElementById("importar-nome").value = "";
     if (paraReservar.length === 0) {
-      alert(`Já temos todas as figurinhas que ${nomeAmigo} tem repetidas!`);
+      alert(`Já temos todas as figurinhas que ${nomeAmigo} tem repetidas (ou já estão reservadas)!`);
       return;
+    }
+    // Se amigo já tem reservas, pergunta se quer substituir ou adicionar
+    const jaTemReceber = receberStaging.some(it => it.amigo === nomeAmigo);
+    if (jaTemReceber) {
+      const opcao = confirm(`${nomeAmigo} já tem figurinhas reservadas para receber.\n\nOK = substituir\nCancelar = adicionar às existentes`);
+      if (opcao) {
+        receberStaging = receberStaging.filter(it => it.amigo !== nomeAmigo);
+        salvarReceber();
+      }
     }
     // Adiciona ao receberStaging
     paraReservar.forEach(item => receberStaging.push(item));
