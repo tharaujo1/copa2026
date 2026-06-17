@@ -1168,6 +1168,8 @@ function processarImportacao() {
       if (!porSel[it.sel.id]) porSel[it.sel.id] = { sel: it.sel, nums: new Set() };
       porSel[it.sel.id].nums.add(it.numLabel);
     });
+    // Conta figurinhas únicas (não por filho) — é o que o Reinaldo precisa separar
+    const totalUnicas = Object.values(porSel).reduce((acc, g) => acc + g.nums.size, 0);
     let resumo = `🤝 ${nomeAmigo}, separa estas pra mim!\nCopa 2026 Panini\n\n`;
     Object.values(porSel).forEach(g => {
       resumo += `${FLAGS[g.sel.id]} ${g.sel.nome}: ${[...g.nums].join(", ")}\n`;
@@ -1175,7 +1177,7 @@ function processarImportacao() {
     resumo += `\nObrigado! 😄`;
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(resumo).then(() => {
-        alert(`✅ ${Object.values(porSel).reduce((a,g)=>a+g.nums.size,0)} figurinha(s) reservadas de ${nomeAmigo}!\nTexto copiado — cole no WhatsApp para pedir ao amigo 😄`);
+        alert(`✅ ${totalUnicas} figurinha(s) para pedir ao ${nomeAmigo}!\nTexto copiado — cole no WhatsApp 😄\n\n${resumo}`);
       });
     } else {
       prompt("Copie o texto:", resumo);
