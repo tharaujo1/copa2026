@@ -894,7 +894,7 @@ function renderPraQuemDar() {
           return `<div style="margin-bottom:10px;background:#1e293b;border-radius:10px;padding:10px">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
               <div style="font-size:12px;font-weight:800;color:#e2e8f0">🤝 ${amigo} vai me dar</div>
-              <button onclick="removerGrupoReceber('${amigo.replace(/'/g,"\\'")})'" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #ef4444;background:#ef444420;color:#ef4444">✕ Remover</button>
+              <button onclick="removerGrupoReceber(this.dataset.amigo)" data-amigo="${amigo}" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #ef4444;background:#ef444420;color:#ef4444">✕ Remover</button>
             </div>
             ${Object.entries(porFilho).map(([filho, itens]) => {
               const c = corNome(filho);
