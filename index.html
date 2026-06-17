@@ -2553,13 +2553,15 @@ function renderTrocas() {
     const chipsLivres = livresLista.length > 0
       ? `<div class="troca-chips" style="margin-top:6px">
           ${[...livresLista].sort(sortFn).map(f => {
-            return `<span class="chip" style="background:${c.accent}15;color:${c.accent};border-color:${c.accent}40;display:inline-flex;align-items:center;gap:4px">
-              <button onclick="addFigTroca('${j}','${f.sel.id}',${f.idx})"
-                style="background:#22c55e;border:none;color:#000;border-radius:4px;padding:2px 7px;font-size:13px;font-weight:900;cursor:pointer;line-height:1">+</button>
-              ${FLAGS[f.sel.id]} ${f.sel.sigla}-${f.numLabel}${f.qtdLivre>1?`<span style="color:#f59e0b"> ×${f.qtdLivre}</span>`:""}
-              <button onclick="subFigTroca('${j}','${f.sel.id}',${f.idx})"
-                style="background:#ef4444;border:none;color:#fff;border-radius:4px;padding:2px 7px;font-size:13px;font-weight:900;cursor:pointer;line-height:1">−</button>
-            </span>`;
+            const staged = doacaoStaging.filter(it => it.selId === f.sel.id && it.idx === f.idx).length;
+            const restante = f.qtdLivre - staged;
+            const cheio = restante <= 0;
+            const cor = cheio ? "#334155" : c.accent;
+            return `<button onclick="adicionarParaDoacao('${f.sel.id}',${f.idx})"
+              class="chip" style="background:${cor}15;color:${cor};border-color:${cor}40;cursor:${cheio?"default":"pointer"};${cheio?"opacity:0.5":""}">
+              ${FLAGS[f.sel.id]} ${f.sel.sigla}-${f.numLabel}${f.qtdLivre>1?` <span style="font-size:9px">×${restante}/${f.qtdLivre}</span>`:""}
+              ${staged>0?`<span style="font-size:9px;color:#22c55e"> ✓${staged}</span>`:""}
+            </button>`;
           }).join("")}
         </div>` : "";
 
