@@ -741,11 +741,8 @@ function renderRepetidasAmigoSolo() {
     return a.idx - b.idx;
   });
 
-  const painelDar = renderDeQuemTirarSolo();
-  const painelReceber = renderPraQuemDarSolo();
-
   if (ordenada.length === 0) {
-    return painelDar + painelReceber + `<div style="color:#475569;font-size:12px;text-align:center;padding:14px 0">Nenhuma repetida livre no momento</div>`;
+    return `<div style="color:#475569;font-size:12px;text-align:center;padding:14px 0">Nenhuma repetida livre no momento</div>`;
   }
 
   const chips = `<div class="troca-chips" style="margin-top:8px">
@@ -762,15 +759,13 @@ function renderRepetidasAmigoSolo() {
     }).join("")}
   </div>
   <div style="font-size:11px;color:#64748b;margin-top:8px">💡 Toque numa figurinha para reservar — o app pede o nome na primeira vez. Use "+ Novo amigo" para trocar de amigo.</div>`;
-  return painelDar + painelReceber + chips;
+  return chips;
 }
 
 function renderRepetidasAmigo() {
   const lista = listaRepetidasOrdenada();
-  const painelDar = renderDeQuemTirar();
-  const painelReceber = renderPraQuemDar();
   if (lista.length === 0) {
-    return painelDar + painelReceber + `<div style="color:#475569;font-size:12px;text-align:center;padding:14px 0">Nenhuma repetida livre no momento</div>`;
+    return `<div style="color:#475569;font-size:12px;text-align:center;padding:14px 0">Nenhuma repetida livre no momento</div>`;
   }
   const chips = `<div class="troca-chips" style="margin-top:8px">
     ${lista.map(item => {
@@ -786,8 +781,8 @@ function renderRepetidasAmigo() {
       </button>`;
     }).join("")}
   </div>
-  <div style="font-size:11px;color:#64748b;margin-top:8px">💡 Toque numa figurinha para reservar — o app pede o nome na primeira vez. Use "+ Novo amigo" para trocar de amigo. Use "+ Novo amigo" para reservar para outra pessoa.</div>`;
-  return painelDar + painelReceber + chips;
+  <div style="font-size:11px;color:#64748b;margin-top:8px">💡 Toque numa figurinha para reservar — o app pede o nome na primeira vez. Use "+ Novo amigo" para trocar de amigo.</div>`;
+  return chips;
 }
 
 function renderDeQuemTirar() {
@@ -2507,37 +2502,48 @@ function renderTrocas() {
 
   const multiAlbum = nomes.length > 1;
 
-  return `
-    <div class="info-box">💡 ${multiAlbum ? `Mostra extras que um colecionador pode dar ao outro. <strong style="color:#f59e0b">Troquem entre vocês primeiro!</strong>` : `Gerencie suas repetidas e trocas com amigos.`}</div>
-    <button onclick="abrirImportar()" style="width:100%;margin-bottom:10px;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">📥 Importar lista de amigo</button>
-    ${multiAlbum ? cardsHtml : ""}
-    ${renderOrdemToggle()}
-    <div class="extras-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-        <div class="ranking-titulo" style="margin:0">🔁 Extras livres para trocar fora</div>
-        ${multiAlbum ? `<div style="display:flex;gap:6px">
-          <button onclick="setVisaoExtras('individual')" style="
-            padding:5px 11px;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;
-            border:1px solid ${visaoTrocaExtras==='individual'?'#3b82f6':'#334155'};
-            background:${visaoTrocaExtras==='individual'?'#3b82f625':'transparent'};
-            color:${visaoTrocaExtras==='individual'?'#3b82f6':'#64748b'}">
-            👤 Individual
-          </button>
-          <button onclick="setVisaoExtras('familia')" style="
-            padding:5px 11px;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;
-            border:1px solid ${visaoTrocaExtras==='familia'?'#a855f7':'#334155'};
-            background:${visaoTrocaExtras==='familia'?'#a855f725':'transparent'};
-            color:${visaoTrocaExtras==='familia'?'#a855f7':'#64748b'}">
-            👥 Família
-          </button>
-        </div>` : ""}
+  // ── Seção 1: Reservas ativas (De quem tirar + Pra quem dar)
+  const temReservas = doacaoStaging.length > 0 || receberStaging.length > 0;
+  const reservasHtml = `
+    <div style="margin-bottom:12px">
+      <div style="font-size:13px;font-weight:800;color:#e2e8f0;margin-bottom:8px;display:flex;align-items:center;gap:8px">
+        📋 Reservas ativas
+        ${temReservas ? `<span style="background:#f59e0b;color:#000;font-size:10px;font-weight:900;padding:2px 7px;border-radius:10px">${doacaoStaging.length + receberStaging.length}</span>` : ""}
       </div>
-      <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
-        <button onclick="${!multiAlbum || visaoTrocaExtras==='individual'?'exportarExtrasIndividualTexto':'exportarRepetidasAmigoTexto'}()" style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #1d4ed8;background:#1e40af25;color:#3b82f6">📋 Texto</button>
-        <button onclick="${!multiAlbum || visaoTrocaExtras==='individual'?'exportarExtrasIndividualImagem':'exportarRepetidasAmigoImagem'}()" style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#94a3b8">🖼️ Imagem</button>
-      </div>
-      ${!multiAlbum ? renderRepetidasAmigoSolo() : visaoTrocaExtras === 'individual' ? extrasHtml : renderRepetidasAmigo()}
+      ${!multiAlbum ? renderDeQuemTirarSolo() + renderPraQuemDarSolo() : renderDeQuemTirar() + renderPraQuemDar()}
     </div>`;
+
+  // ── Seção 2: Extras para amigos
+  const extrasAmigosHtml = `
+    <div style="margin-bottom:12px">
+      <div style="font-size:13px;font-weight:800;color:#e2e8f0;margin-bottom:8px">📦 Extras para amigos</div>
+      <button onclick="abrirImportar()" style="width:100%;margin-bottom:10px;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">📥 Importar lista de amigo</button>
+      ${renderOrdemToggle()}
+      <div class="extras-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+          <div class="ranking-titulo" style="margin:0">🔁 Estoque disponível</div>
+          ${multiAlbum ? `<div style="display:flex;gap:6px">
+            <button onclick="setVisaoExtras('individual')" style="padding:5px 11px;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${visaoTrocaExtras==='individual'?'#3b82f6':'#334155'};background:${visaoTrocaExtras==='individual'?'#3b82f625':'transparent'};color:${visaoTrocaExtras==='individual'?'#3b82f6':'#64748b'}">👤 Individual</button>
+            <button onclick="setVisaoExtras('familia')" style="padding:5px 11px;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${visaoTrocaExtras==='familia'?'#a855f7':'#334155'};background:${visaoTrocaExtras==='familia'?'#a855f725':'transparent'};color:${visaoTrocaExtras==='familia'?'#a855f7':'#64748b'}">👥 Família</button>
+          </div>` : ""}
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+          <button onclick="${!multiAlbum || visaoTrocaExtras==='individual'?'exportarExtrasIndividualTexto':'exportarRepetidasAmigoTexto'}()" style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #1d4ed8;background:#1e40af25;color:#3b82f6">📋 Texto</button>
+          <button onclick="${!multiAlbum || visaoTrocaExtras==='individual'?'exportarExtrasIndividualImagem':'exportarRepetidasAmigoImagem'}()" style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#94a3b8">🖼️ Imagem</button>
+        </div>
+        ${!multiAlbum ? renderRepetidasAmigoSolo() : visaoTrocaExtras === 'individual' ? extrasHtml : renderRepetidasAmigo()}
+      </div>
+    </div>`;
+
+  // ── Seção 3: Trocas entre irmãos (só multiAlbum)
+  const irmaosHtml = multiAlbum ? `
+    <div style="margin-bottom:12px">
+      <div style="font-size:13px;font-weight:800;color:#e2e8f0;margin-bottom:8px">🔄 Trocas entre irmãos</div>
+      <div class="info-box">💡 Mostra extras que um colecionador pode dar ao outro. <strong style="color:#f59e0b">Troquem entre vocês primeiro!</strong></div>
+      ${cardsHtml}
+    </div>` : "";
+
+  return reservasHtml + extrasAmigosHtml + irmaosHtml;
 }
 
 // ── STATS ────────────────────────────────────────────────────────────────────
