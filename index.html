@@ -927,7 +927,7 @@ const NOME_PARA_SIGLA = {
   "australia": "AUS",
   "austria": "AUT",
   "belgica": "BEL",
-  "bosnia": "BIH", "bosnia herzegovima": "BIH", "bosnia-herzegovima": "BIH",
+  "bosnia": "BIH", "bosnia herzegovima": "BIH", "bosnia-herzegovima": "BIH", "bosnia-herzeg.": "BIH", "bosnia herzeg.": "BIH",
   "brasil": "BRA",
   "cabo verde": "CPV",
   "canada": "CAN",
@@ -942,6 +942,7 @@ const NOME_PARA_SIGLA = {
   "equador": "ECU",
   "escocia": "SCO",
   "espanha": "ESP",
+  "inglaterra": "ENG", "england": "ENG",
   "estados unidos": "USA", "eua": "USA",
   "fwc historia": "FWC3", "fwc troféu": "FWC1", "fwc sedes": "FWC2", "fwc": "FWC",
   "franca": "FRA", "frança": "FRA",
@@ -961,8 +962,8 @@ const NOME_PARA_SIGLA = {
   "paraguai": "PAR",
   "polonia": "POL",
   "portugal": "POR",
-  "rep tcheca": "CZE", "republica tcheca": "CZE", "república tcheca": "CZE", "tchecia": "CZE",
-  "rep democratica congo": "COD", "congo": "COD",
+  "rep tcheca": "CZE", "republica tcheca": "CZE", "república tcheca": "CZE", "rep. tcheca": "CZE", "tchecia": "CZE",
+  "rep democratica congo": "COD", "rep. dem. congo": "COD", "rep dem congo": "COD", "congo": "COD",
   "arabia saudita": "KSA",
   "senegal": "SEN",
   "suecia": "SWE", "suécia": "SWE",
@@ -984,8 +985,13 @@ function parsearListaAmigo(texto) {
   linhas.forEach(linha => {
     linha = linha.trim();
     if (!linha) return;
-    // Remove emojis e caracteres especiais do início
-    const linhaSemEmoji = linha.replace(/[\u{1F000}-\u{1FFFF}|\u{2600}-\u{27FF}|\u{1F300}-\u{1F9FF}|\uFE0F|\u200D]/gu, "").trim();
+    // Remove emojis e caracteres especiais do início (incluindo bandeiras regionais \u{1F1E0}-\u{1F1FF})
+    const linhaSemEmoji = linha
+      .replace(/[\u{1F1E0}-\u{1F1FF}]{1,2}/gu, '')  // bandeiras regionais (pares de letras)
+      .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')          // outros emojis
+      .replace(/[\uFE0F\u200D]/g, '')                   // variation selector e ZWJ
+      .replace(/[\u{E0000}-\u{E007F}]+/gu, '')          // tags (bandeiras especiais como Escócia)
+      .trim();
     if (!linhaSemEmoji) return;
 
     let siglaRaw = null;
@@ -1165,19 +1171,31 @@ function processarImportacao() {
     // Gera texto para mandar ao amigo
     const porSel = {};
     paraReservar.forEach(it => {
-      if (!porSel[it.sel.id]) porSel[it.sel.id] = { sel: it.sel, nums: new Set() };
-      porSel[it.sel.id].nums.add(it.numLabel);
+      const key = `${it.sel.id}|${it.idx}`;
+      if (!porSel[key]) porSel[key] = { sel: it.sel, numLabel: it.numLabel, qtd: 0 };
+      porSel[key].qtd++;
     });
-    // Conta figurinhas únicas (não por filho) — é o que o Reinaldo precisa separar
-    const totalUnicas = Object.values(porSel).reduce((acc, g) => acc + g.nums.size, 0);
+    // Agrupa por seleção para o texto
+    const porSelGrupo = {};
+    Object.values(porSel).forEach(it => {
+      if (!porSelGrupo[it.sel.id]) porSelGrupo[it.sel.id] = { sel: it.sel, itens: [] };
+      porSelGrupo[it.sel.id].itens.push(it);
+    });
+    // Total de figurinhas físicas que o amigo precisa separar
+    const totalFisico = Object.values(porSel).reduce((acc, it) => acc + it.qtd, 0);
+    const totalUnicas = Object.values(porSel).length;
     let resumo = `🤝 ${nomeAmigo}, separa estas pra mim!\nCopa 2026 Panini\n\n`;
-    Object.values(porSel).forEach(g => {
-      resumo += `${FLAGS[g.sel.id]} ${g.sel.nome}: ${[...g.nums].join(", ")}\n`;
+    Object.values(porSelGrupo).forEach(g => {
+      const nums = g.itens.map(it => it.qtd > 1 ? `${it.numLabel}(x${it.qtd})` : `${it.numLabel}`).join(", ");
+      resumo += `${FLAGS[g.sel.id]} ${g.sel.nome}: ${nums}\n`;
     });
     resumo += `\nObrigado! 😄`;
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(resumo).then(() => {
-        alert(`✅ ${totalUnicas} figurinha(s) para pedir ao ${nomeAmigo}!\nTexto copiado — cole no WhatsApp 😄\n\n${resumo}`);
+        const msg = totalFisico === totalUnicas
+          ? `✅ ${totalFisico} figurinha(s) para pedir ao ${nomeAmigo}!`
+          : `✅ ${totalFisico} figurinha(s) para pedir ao ${nomeAmigo}!\n(${totalUnicas} únicas — algumas precisamos de mais de 1 cópia)`;
+        alert(`${msg}\nTexto copiado — cole no WhatsApp 😄\n\n${resumo}`);
       });
     } else {
       prompt("Copie o texto:", resumo);
