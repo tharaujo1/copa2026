@@ -623,6 +623,51 @@ function removerItemDoacao(i) {
   render();
 }
 
+function exportarGrupoDoacao(amigo) {
+  const itens = doacaoStaging.filter(it => it.amigo === amigo);
+  if (itens.length === 0) return;
+  // Agrupa por seleção
+  const porSel = {};
+  itens.forEach(it => {
+    if (!porSel[it.sel.id]) porSel[it.sel.id] = { sel: it.sel, nums: [] };
+    porSel[it.sel.id].nums.push(it.numLabel);
+  });
+  let texto = `📦 ${amigo} — figurinhas que vou te dar:\nCopa 2026 Panini\n\n`;
+  Object.values(porSel).forEach(g => {
+    texto += `${FLAGS[g.sel.id]} ${g.sel.nome}: ${g.nums.join(", ")}\n`;
+  });
+  texto += `\nGerado em ${new Date().toLocaleDateString("pt-BR")}`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texto).then(() => alert("✅ Copiado! Cole no WhatsApp."));
+  } else { prompt("Copie:", texto); }
+}
+
+function exportarGrupoReceber(amigo) {
+  const itens = receberStaging.filter(it => it.amigo === amigo && it.sel);
+  if (itens.length === 0) return;
+  // Agrupa por seleção, contando quantas cópias
+  const porSel = {};
+  itens.forEach(it => {
+    const key = `${it.sel.id}|${it.idx}`;
+    if (!porSel[key]) porSel[key] = { sel: it.sel, numLabel: it.numLabel, qtd: 0 };
+    porSel[key].qtd++;
+  });
+  const porSelGrupo = {};
+  Object.values(porSel).forEach(it => {
+    if (!porSelGrupo[it.sel.id]) porSelGrupo[it.sel.id] = { sel: it.sel, itens: [] };
+    porSelGrupo[it.sel.id].itens.push(it);
+  });
+  let texto = `🤝 ${amigo}, separa estas pra mim!\nCopa 2026 Panini\n\n`;
+  Object.values(porSelGrupo).forEach(g => {
+    const nums = g.itens.map(it => it.qtd > 1 ? `${it.numLabel}(x${it.qtd})` : `${it.numLabel}`).join(", ");
+    texto += `${FLAGS[g.sel.id]} ${g.sel.nome}: ${nums}\n`;
+  });
+  texto += `\nObrigado! 😄`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texto).then(() => alert("✅ Copiado! Cole no WhatsApp."));
+  } else { prompt("Copie:", texto); }
+}
+
 function removerGrupoAmigo(amigo) {
   if (!confirm(`Remover todas as figurinhas reservadas para ${amigo}?`)) return;
   doacaoStaging = doacaoStaging.filter(item => item.amigo !== amigo);
@@ -820,7 +865,10 @@ function renderDeQuemTirar() {
                 <div style="font-size:12px;font-weight:800;color:${ehSemNome?"#f59e0b":"#e2e8f0"}">🤝 ${amigo}</div>
                 ${ehSemNome ? `<button onclick="renomearAmigo()" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">Identificar amigo</button>` : ""}
               </div>
-              <button onclick="removerGrupoAmigo('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #ef4444;background:#ef444420;color:#ef4444">✕ Remover</button>
+              <div style="display:flex;gap:4px">
+                <button onclick="exportarGrupoDoacao('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6">📋 Exportar</button>
+                <button onclick="removerGrupoAmigo('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #ef4444;background:#ef444420;color:#ef4444">✕ Remover</button>
+              </div>
             </div>
             ${Object.entries(porFilho).map(([filho, itens]) => {
               const c = corNome(filho);
@@ -908,7 +956,10 @@ function renderPraQuemDar() {
           return `<div style="margin-bottom:10px;background:#1e293b;border-radius:10px;padding:10px">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
               <div style="font-size:12px;font-weight:800;color:#e2e8f0">🤝 ${amigo} vai me dar</div>
-              <button onclick="removerGrupoReceber(this.dataset.amigo)" data-amigo="${amigo}" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #ef4444;background:#ef444420;color:#ef4444">✕ Remover</button>
+              <div style="display:flex;gap:4px">
+                <button onclick="exportarGrupoReceber(this.dataset.amigo)" data-amigo="${amigo}" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6">📋 Exportar</button>
+                <button onclick="removerGrupoReceber(this.dataset.amigo)" data-amigo="${amigo}" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #ef4444;background:#ef444420;color:#ef4444">✕ Remover</button>
+              </div>
             </div>
             ${Object.entries(porFilho).map(([filho, itens]) => {
               const c = corNome(filho);
