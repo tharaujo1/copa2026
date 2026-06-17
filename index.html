@@ -1513,7 +1513,7 @@ function exportarFamiliaImagem() {
   const linhasSecoes = [];
   selecoesOrdenadas().forEach(s => {
     const faltantes = [];
-    state[nomes[0]][s.id].forEach((_, idx) => {
+    Array.from({length: s.qtd}, (_, i) => i).forEach(idx => {
       const qtdFalta = nomes.filter(n => state[n][s.id][idx] === 0).length;
       if (qtdFalta > 0) {
         const numLabel = s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
@@ -1567,37 +1567,37 @@ function exportarFamiliaImagem() {
 
 function renderVisaoFamilia() {
   const nomes = config.nomes;
-  let html = `<div style="background:#111827;border-radius:12px;padding:12px 14px;margin-bottom:12px;border:1px solid #a855f750">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:13px;font-weight:700;color:#a855f7">👥 Família — faltantes consolidados</div>
-      <button onclick="exportarConsolidado()" style="background:#a855f725;border:1px solid #a855f7;color:#a855f7;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">📋 Exportar</button>
-    </div>`;
+  // Coleta todos os faltantes em lista flat
+  const todos = [];
   selecoesOrdenadas().forEach(s => {
-    const faltantes = [];
-    state[nomes[0]][s.id].forEach((_, idx) => {
+    const todos_idx = Array.from({length: s.qtd}, (_, i) => i);
+    todos_idx.forEach(idx => {
       const qtdFalta = nomes.filter(n => state[n][s.id][idx] === 0).length;
       const nasSessaoCount = sessaoTroca.filter(i => i.selId === s.id && i.idx === idx).length;
       const noReceberCount = receberStaging.filter(i => i.selId === s.id && i.idx === idx).length;
       const qtdRestante = qtdFalta - nasSessaoCount - noReceberCount;
       if (qtdRestante > 0) {
         const numLabel = s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
-        faltantes.push({ numLabel, qtdFalta: qtdRestante, idx, selId: s.id, selNome: s.nome, flag: FLAGS[s.id] });
+        todos.push({ numLabel, qtdFalta: qtdRestante, idx, selId: s.id, selNome: s.nome, flag: FLAGS[s.id], sigla: s.sigla });
       }
     });
-    if (faltantes.length > 0) {
-      html += `<div style="padding:6px 0;border-bottom:1px solid #1e293b">
-        <div style="font-size:11px;color:#94a3b8;margin-bottom:4px">${FLAGS[s.id]} ${s.nome}</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">
-          ${faltantes.map(f => `
-            <button onclick="abrirModalFigurinha('${f.selId}',${f.idx},'${f.numLabel}','${f.selNome}','${f.flag}')"
-              style="background:${f.qtdFalta>1?"#f59e0b20":"#1e293b"};color:${f.qtdFalta>1?"#f59e0b":"#94a3b8"};border:1px solid ${f.qtdFalta>1?"#f59e0b50":"#334155"};border-radius:4px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer">
-              ${f.numLabel}${f.qtdFalta>1?`<span style="font-size:9px;font-weight:400"> (×${f.qtdFalta})</span>`:""}
-            </button>`).join("")}
-        </div>
-      </div>`;
-    }
   });
-  return html + `</div>`;
+
+  const chips = todos.map(f => `
+    <button onclick="abrirModalFigurinha('${f.selId}',${f.idx},'${f.numLabel}','${f.selNome}','${f.flag}')"
+      style="background:${f.qtdFalta>1?"#f59e0b20":"#1e293b"};color:${f.qtdFalta>1?"#f59e0b":"#94a3b8"};border:1px solid ${f.qtdFalta>1?"#f59e0b50":"#334155"};border-radius:4px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer">
+      ${f.sigla}-${f.numLabel}${f.qtdFalta>1?`<span style="font-size:9px;font-weight:400"> (×${f.qtdFalta})</span>`:""}
+    </button>`).join("");
+
+  return `<div style="background:#111827;border-radius:12px;padding:12px 14px;margin-bottom:12px;border:1px solid #a855f750">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:700;color:#a855f7">👥 Família — faltantes consolidados</div>
+      <button onclick="exportarConsolidado()" style="background:#a855f725;border:1px solid #a855f7;color:#a855f7;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">📋 Exportar</button>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px">
+      ${chips}
+    </div>
+  </div>`;
 }
 
 // ─── SESSÃO DE TROCA ──────────────────────────────────────────────────────────
@@ -1672,16 +1672,25 @@ function atualizarBadgeSessao() {
 // Calcula quem tem menos figurinhas de uma seleção (para sugestão)
 function sugerirDestinatario(selId, idx) {
   const nomes = config.nomes;
-  const precisam = nomes.filter(n => state[n][selId][idx] === 0);
+  const idxNum = parseInt(idx);
+  const jaNaSessao = sessaoTroca
+    .filter(it => it.selId === selId && parseInt(it.idx) === idxNum)
+    .map(it => it.para);
+  const precisam = nomes.filter(n => state[n][selId][idxNum] === 0 && !jaNaSessao.includes(n));
   if (precisam.length === 0) return null;
-  const totalAlbum = (nome) => SELECOES.reduce((acc, s) => acc + state[nome][s.id].filter(q => q >= 1).length, 0);
+
+  // Conta figurinhas na sessão por filho (para cada seleção e no total)
+  const sessaoNaSel = (nome) => sessaoTroca.filter(it => it.selId === selId && it.para === nome).length;
+  const sessaoTotal = (nome) => sessaoTroca.filter(it => it.para === nome).length;
+
   return [...precisam].sort((a, b) => {
-    // 1. Menos figurinhas naquela seleção
-    const ta = state[a][selId].filter(q => q >= 1).length;
-    const tb = state[b][selId].filter(q => q >= 1).length;
+    // 1. Menos figurinhas naquela seleção (álbum + sessão)
+    const ta = state[a][selId].filter(q => q >= 1).length + sessaoNaSel(a);
+    const tb = state[b][selId].filter(q => q >= 1).length + sessaoNaSel(b);
     if (ta !== tb) return ta - tb;
-    // 2. Menos figurinhas no álbum total
-    const totalA = totalAlbum(a), totalB = totalAlbum(b);
+    // 2. Menos figurinhas no álbum total (álbum + sessão)
+    const totalA = SELECOES.reduce((acc, s) => acc + state[a][s.id].filter(q => q >= 1).length, 0) + sessaoTotal(a);
+    const totalB = SELECOES.reduce((acc, s) => acc + state[b][s.id].filter(q => q >= 1).length, 0) + sessaoTotal(b);
     if (totalA !== totalB) return totalA - totalB;
     // 3. Alfabético
     return a.localeCompare(b);
@@ -1692,19 +1701,25 @@ function sugerirDestinatario(selId, idx) {
 function abrirModalFigurinha(selId, idx, numLabel, selNome, flag) {
   const nomes = config.nomes;
   const nomeAtivo = config.nomes[jogadorAtivo];
-  const precisam = nomes.filter(n => state[n][selId][idx] === 0);
+  const idxNum = parseInt(idx);
+  // Desconta quem já recebeu essa figurinha na sessão de banca
+  const jaNaSessao = sessaoTroca
+    .filter(it => it.selId === selId && parseInt(it.idx) === idxNum)
+    .map(it => it.para);
+  const precisam = nomes.filter(n => state[n][selId][idxNum] === 0 && !jaNaSessao.includes(n));
   if (precisam.length === 0) return;
 
-  // Se está na visão individual (filho ativo precisa), confirma direto para ele
-  if (precisam.includes(nomeAtivo)) {
-    confirmarFigurinhaSessao(selId, idx, nomeAtivo, numLabel, selNome, flag);
+  // Se está na visão individual (filho ativo precisa) E família não está ativo → confirma direto
+  if (!visaoFamilia && precisam.includes(nomeAtivo)) {
+    confirmarFigurinhaSessao(selId, idxNum, nomeAtivo, numLabel, selNome, flag);
     return;
   }
 
-  // Visão consolidada família: mais de 1 precisa e nenhum é o ativo
-  const sugerido = sugerirDestinatario(selId, idx);
-  if (precisam.length === 1) {
-    confirmarFigurinhaSessao(selId, idx, precisam[0], numLabel, selNome, flag);
+  // Visão família OU filho ativo não precisa → sempre mostra modal
+  const sugerido = sugerirDestinatario(selId, idxNum);
+  // Se só 1 precisa E não está no modo família → confirma direto
+  if (!visaoFamilia && precisam.length === 1) {
+    confirmarFigurinhaSessao(selId, idxNum, precisam[0], numLabel, selNome, flag);
     return;
   }
 
@@ -1718,7 +1733,7 @@ function abrirModalFigurinha(selId, idx, numLabel, selNome, flag) {
     const ehSugerido = nome === sugerido;
     return `<button class="modal-btn-filho${ehSugerido?" sugerido":""}"
       style="${ehSugerido?"":`border-color:${c.accent}40;color:${c.accent}`}"
-      onclick="confirmarFigurinhaSessao('${selId}',${idx},'${nome}','${numLabel}','${selNome}','${flag}')">
+      onclick="confirmarFigurinhaSessao('${selId}',${idxNum},'${nome}','${numLabel}','${selNome}','${flag}')">
       ${nome}${ehSugerido?" ✓":""}
     </button>`;
   }).join("");
@@ -2103,7 +2118,7 @@ function exportarConsolidado() {
   texto += `Copa 2026 Panini\n\n`;
   selecoesOrdenadas().forEach(s => {
     const faltantes = [];
-    state[nomes[0]][s.id].forEach((_, idx) => {
+    Array.from({length: s.qtd}, (_, i) => i).forEach(idx => {
       const qtdFalta = nomes.filter(n => state[n][s.id][idx] === 0).length;
       if (qtdFalta > 0) {
         const numLabel = s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
