@@ -1573,9 +1573,9 @@ function renderVisaoFamilia() {
     const todos_idx = Array.from({length: s.qtd}, (_, i) => i);
     todos_idx.forEach(idx => {
       const qtdFalta = nomes.filter(n => state[n][s.id][idx] === 0).length;
-      const nasSessaoCount = sessaoTroca.filter(i => i.selId === s.id && i.idx === idx).length;
+      // Desconta apenas receberStaging — sessaoTroca já está refletida no state
       const noReceberCount = receberStaging.filter(i => i.selId === s.id && i.idx === idx).length;
-      const qtdRestante = qtdFalta - nasSessaoCount - noReceberCount;
+      const qtdRestante = qtdFalta - noReceberCount;
       if (qtdRestante > 0) {
         const numLabel = s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
         todos.push({ numLabel, qtdFalta: qtdRestante, idx, selId: s.id, selNome: s.nome, flag: FLAGS[s.id], sigla: s.sigla });
@@ -1709,19 +1709,19 @@ function abrirModalFigurinha(selId, idx, numLabel, selNome, flag) {
   const precisam = nomes.filter(n => state[n][selId][idxNum] === 0 && !jaNaSessao.includes(n));
   if (precisam.length === 0) return;
 
-  // Se está na visão individual (filho ativo precisa) E família não está ativo → confirma direto
-  if (!visaoFamilia && precisam.includes(nomeAtivo)) {
+  // Se está na visão individual (filho ativo precisa) E família não está ativo E só 1 precisa → confirma direto
+  if (!visaoFamilia && precisam.includes(nomeAtivo) && precisam.length === 1) {
     confirmarFigurinhaSessao(selId, idxNum, nomeAtivo, numLabel, selNome, flag);
     return;
   }
 
-  // Visão família OU filho ativo não precisa → sempre mostra modal
-  const sugerido = sugerirDestinatario(selId, idxNum);
   // Se só 1 precisa E não está no modo família → confirma direto
   if (!visaoFamilia && precisam.length === 1) {
     confirmarFigurinhaSessao(selId, idxNum, precisam[0], numLabel, selNome, flag);
     return;
   }
+
+  // Sempre mostra modal quando mais de 1 precisa OU está no modo família
 
   document.getElementById("modal-titulo").textContent = `${flag} ${selNome}-${numLabel}`;
   document.getElementById("modal-sub").textContent =
@@ -1750,11 +1750,11 @@ function confirmarFigurinhaSessao(selId, idx, para, numLabel, selNome, flag) {
   // Atualiza álbum imediatamente — decisão da próxima figurinha já considera o estado real
   if (state[para][selId][idx] === 0) {
     state[para][selId][idx] = 1;
-    salvarEstado();
   }
   sessaoTroca.push({ selId, idx, para, numLabel, selNome, flag });
+  salvarEstado(); // salva depois de atualizar state E push na sessão
   salvarSessao();
-  render();
+  render(); // renderiza com state já atualizado
   const toast = document.getElementById("toast");
   toast.textContent = `✅ ${flag} ${selNome}-${numLabel} → ${para}`;
   toast.classList.add("show");
