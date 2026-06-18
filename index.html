@@ -1723,6 +1723,7 @@ function abrirModalFigurinha(selId, idx, numLabel, selNome, flag) {
   }
 
   // Sempre mostra modal quando mais de 1 precisa OU está no modo família
+  const sugerido = sugerirDestinatario(selId, idxNum);
 
   document.getElementById("modal-titulo").textContent = `${flag} ${selNome}-${numLabel}`;
   document.getElementById("modal-sub").textContent =
