@@ -1024,7 +1024,9 @@ const NOME_PARA_SIGLA = {
   "polonia": "POL",
   "portugal": "POR",
   "rep tcheca": "CZE", "republica tcheca": "CZE", "república tcheca": "CZE", "rep. tcheca": "CZE", "tchecia": "CZE",
-  "rep democratica congo": "COD", "rep. dem. congo": "COD", "rep dem congo": "COD", "congo": "COD",
+  "rep democratica congo": "COD", "rep. dem. congo": "COD", "rep dem congo": "COD", "congo rd": "COD", "congo rdc": "COD", "congo": "COD",
+  "bosnia e herzegovina": "BIH", "bosnia herzegovina": "BIH",
+  "introducao": "FWC", "introdução": "FWC",
   "arabia saudita": "KSA",
   "senegal": "SEN",
   "suecia": "SWE", "suécia": "SWE",
@@ -1043,35 +1045,77 @@ function normalizarTexto(t) {
 function parsearListaAmigo(texto) {
   const resultado = [];
   const linhas = texto.split(/\n/);
+  let siglaContexto = null; // sigla da linha de cabeçalho anterior
+
   linhas.forEach(linha => {
     linha = linha.trim();
     if (!linha) return;
-    // Remove emojis e caracteres especiais do início (incluindo bandeiras regionais \u{1F1E0}-\u{1F1FF})
+
     const linhaSemEmoji = linha
-      .replace(/[\u{1F1E0}-\u{1F1FF}]{1,2}/gu, '')  // bandeiras regionais (pares de letras)
-      .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')          // outros emojis
-      .replace(/[\uFE0F\u200D]/g, '')                   // variation selector e ZWJ
-      .replace(/[\u{E0000}-\u{E007F}]+/gu, '')          // tags (bandeiras especiais como Escócia)
+      .replace(/[\u{1F1E0}-\u{1F1FF}]{1,2}/gu, '')
+      .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
+      .replace(/[\uFE0F\u200D]/g, '')
+      .replace(/[\u{E0000}-\u{E007F}]+/gu, '')
+      .replace(/[*_~]/g, '') // remove markdown bold/italic
       .trim();
     if (!linhaSemEmoji) return;
+
+    // Ignora linhas de cabeçalho/rodapé sem figurinhas
+    if (/^(bora trocar|android|ios|http|falta[m]?\s*\d|\/994|copa 2026)/i.test(linhaSemEmoji)) return;
 
     let siglaRaw = null;
     let numStr = null;
 
-    // Formato 1: sigla curta "BRA: 1,2,3" ou "BRA 1,2,3"
+    // Formato 1: "CZE12, CZE13" — sigla colada ao número, sem separador
+    const matchColado = linhaSemEmoji.match(/^([A-Z]{2,5})\d/i);
+    if (matchColado) {
+      // Extrai pares sigla+número: "CZE12, CZE13, BIH17"
+      const partes = linhaSemEmoji.split(/[,\s]+/);
+      partes.forEach(parte => {
+        parte = parte.trim();
+        const m = parte.match(/^([A-Z]{2,5})(\d+)$/i);
+        if (m) {
+          const s = m[1].toUpperCase();
+          const n = parseInt(m[2]);
+          // Procura entrada existente ou cria nova
+          let entry = resultado.find(r => r.siglaRaw === s);
+          if (!entry) { entry = { siglaRaw: s, nums: [] }; resultado.push(entry); }
+          entry.nums.push({ n, qtd: 1 });
+        }
+      });
+      siglaContexto = null;
+      return;
+    }
+
+    // Formato 2: sigla curta com separador "BRA: 1,2,3"
     const matchSigla = linhaSemEmoji.match(/^([A-Z][A-Z0-9\-]{1,4})[:\s]+(.+)$/i);
-    if (matchSigla && matchSigla[1].length <= 5) {
+    if (matchSigla && matchSigla[1].length <= 5 && /\d/.test(matchSigla[2])) {
       siglaRaw = matchSigla[1].toUpperCase().trim();
       numStr = matchSigla[2];
+      siglaContexto = null;
     } else {
-      // Formato 2: nome completo "Brasil: 1,2,3" ou "África do Sul: 03, 04"
+      // Formato 3: nome completo com números na mesma linha "Brasil: 1,2,3"
       const matchNome = linhaSemEmoji.match(/^(.+?):\s*(.+)$/);
-      if (matchNome) {
+      if (matchNome && /\d/.test(matchNome[2])) {
         const nomeNorm = normalizarTexto(matchNome[1]);
         const siglaMapeada = NOME_PARA_SIGLA[nomeNorm];
         if (siglaMapeada) {
           siglaRaw = siglaMapeada;
           numStr = matchNome[2];
+          siglaContexto = null;
+        }
+      } else {
+        // Formato 4: nome na linha, números na próxima — "República Tcheca:\nCZE12, CZE13"
+        const matchCabecalho = linhaSemEmoji.match(/^(.+?):?\s*$/);
+        if (matchCabecalho) {
+          const nomeNorm = normalizarTexto(matchCabecalho[1]);
+          const siglaMapeada = NOME_PARA_SIGLA[nomeNorm];
+          if (siglaMapeada) siglaContexto = siglaMapeada;
+        }
+        // Linha só com números (contexto da linha anterior)
+        if (siglaContexto && /^\d/.test(linhaSemEmoji)) {
+          siglaRaw = siglaContexto;
+          numStr = linhaSemEmoji;
         }
       }
     }
@@ -1079,19 +1123,19 @@ function parsearListaAmigo(texto) {
     if (!siglaRaw || !numStr) return;
 
     const nums = [];
-    // Suporta: "1,2,3" / "1-3" / "05(x3)" / "05 (x3)" / "05(×3)"
     numStr.split(/[,\s]+/).forEach(part => {
       part = part.trim();
       if (!part) return;
-      // Captura quantidade ex: "05(x3)" → num=5, qtd=3
       const qtdMatch = part.match(/\([x×](\d+)\)/i);
       const qtd = qtdMatch ? parseInt(qtdMatch[1]) : 1;
       const semQtd = part.replace(/\([x×]\d+\)/gi, "").trim();
-      const range = semQtd.match(/^(\d+)-(\d+)$/);
+      // Remove prefixo de sigla se colado ex: "CZE12" → 12
+      const semSigla = semQtd.replace(/^[A-Z]{2,5}/i, "");
+      const range = semSigla.match(/^(\d+)-(\d+)$/);
       if (range) {
         for (let n = parseInt(range[1]); n <= parseInt(range[2]); n++) nums.push({ n, qtd: 1 });
       } else {
-        const n = parseInt(semQtd);
+        const n = parseInt(semSigla || semQtd);
         if (!isNaN(n)) nums.push({ n, qtd });
       }
     });
