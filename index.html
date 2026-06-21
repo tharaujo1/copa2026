@@ -594,6 +594,9 @@ function selecionarAmigoModal(selId, idx, amigo, numLabel, origem) {
   const sel = SELECOES.find(s => s.id === selId);
   amigoAtual = amigo;
   doacaoStaging.push({ selId, idx, sel, numLabel, origem, amigo });
+  // Desconta do álbum imediatamente
+  if (state[origem][selId][idx] > 0) state[origem][selId][idx]--;
+  salvarEstado();
   salvarDoacao();
   render();
 }
@@ -605,6 +608,9 @@ function novoAmigoModal(selId, idx, numLabel, origem) {
   if (!nome || !nome.trim()) return;
   amigoAtual = nome.trim();
   doacaoStaging.push({ selId, idx, sel, numLabel, origem, amigo: amigoAtual });
+  // Desconta do álbum imediatamente
+  if (state[origem][selId][idx] > 0) state[origem][selId][idx]--;
+  salvarEstado();
   salvarDoacao();
   render();
 }
@@ -617,9 +623,15 @@ function novoAmigo() {
 }
 
 function removerItemDoacao(i) {
-  // Remove da reserva SEM descontar — figurinha voltou para o estoque
+  const item = doacaoStaging[i];
+  if (!item) return;
+  // Devolve ao álbum
+  if (state[item.origem] && state[item.origem][item.selId]) {
+    state[item.origem][item.selId][item.idx]++;
+  }
   doacaoStaging.splice(i, 1);
   if (doacaoStaging.length === 0) amigoAtual = null;
+  salvarEstado();
   salvarDoacao();
   render();
 }
@@ -671,8 +683,15 @@ function exportarGrupoReceber(amigo) {
 
 function removerGrupoAmigo(amigo) {
   if (!confirm(`Remover todas as figurinhas reservadas para ${amigo}?`)) return;
+  // Devolve ao álbum
+  doacaoStaging.filter(item => item.amigo === amigo).forEach(item => {
+    if (state[item.origem] && state[item.origem][item.selId]) {
+      state[item.origem][item.selId][item.idx]++;
+    }
+  });
   doacaoStaging = doacaoStaging.filter(item => item.amigo !== amigo);
   if (amigoAtual === amigo) amigoAtual = null;
+  salvarEstado();
   salvarDoacao();
   render();
 }
@@ -909,16 +928,30 @@ function receberTudo() {
 }
 
 function removerItemReceber(i) {
+  const item = receberStaging[i];
+  if (!item) return;
+  // Reverte no álbum — amigo não tinha mais essa figurinha
+  if (state[item.paraFilho] && state[item.paraFilho][item.selId]) {
+    state[item.paraFilho][item.selId][item.idx] = 0;
+  }
   receberStaging.splice(i, 1);
   if (receberStaging.length === 0) amigoReceber = null;
+  salvarEstado();
   salvarReceber();
   render();
 }
 
 function removerGrupoReceber(amigo) {
   if (!confirm(`Remover todas as figurinhas aguardando de ${amigo}?`)) return;
+  // Reverte no álbum
+  receberStaging.filter(item => item.amigo === amigo).forEach(item => {
+    if (state[item.paraFilho] && state[item.paraFilho][item.selId]) {
+      state[item.paraFilho][item.selId][item.idx] = 0;
+    }
+  });
   receberStaging = receberStaging.filter(item => item.amigo !== amigo);
   if (amigoReceber === amigo) amigoReceber = null;
+  salvarEstado();
   salvarReceber();
   render();
 }
@@ -1242,10 +1275,16 @@ function processarImportacao() {
       fecharImportar();
       return;
     }
-    // Reserva tudo no staging
-    paraReservar.forEach(item => doacaoStaging.push(item));
+    // Reserva tudo no staging e já desconta do álbum
+    paraReservar.forEach(item => {
+      doacaoStaging.push(item);
+      if (state[item.origem][item.selId][item.idx] > 0) {
+        state[item.origem][item.selId][item.idx]--;
+      }
+    });
     amigoAtual = nomeAmigo;
     visaoTrocaExtras = 'familia';
+    salvarEstado();
     salvarDoacao();
     fecharImportar();
     document.getElementById("importar-texto").value = "";
@@ -1303,10 +1342,16 @@ function processarImportacao() {
         salvarReceber();
       }
     }
-    // Adiciona ao receberStaging
-    paraReservar.forEach(item => receberStaging.push(item));
+    // Adiciona ao receberStaging e já marca no álbum
+    paraReservar.forEach(item => {
+      receberStaging.push(item);
+      if (state[item.paraFilho][item.selId][item.idx] === 0) {
+        state[item.paraFilho][item.selId][item.idx] = 1;
+      }
+    });
     amigoReceber = nomeAmigo;
-    visaoTrocaExtras = 'familia'; // muda para família para mostrar o painel
+    visaoTrocaExtras = 'familia';
+    salvarEstado();
     salvarReceber();
     // Gera texto para mandar ao amigo
     const porSel = {};
