@@ -681,6 +681,25 @@ function exportarGrupoReceber(amigo) {
   } else { prompt("Copie:", texto); }
 }
 
+function confirmarGrupoDoacao(amigo) {
+  const itens = doacaoStaging.filter(it => it.amigo === amigo);
+  itens.forEach(item => {
+    // já foi descontado ao reservar — só remove do staging
+  });
+  doacaoStaging = doacaoStaging.filter(it => it.amigo !== amigo);
+  if (amigoAtual === amigo) amigoAtual = null;
+  salvarDoacao();
+  render();
+}
+
+function receberGrupo(amigo) {
+  // Figurinhas já marcadas no álbum ao importar — só limpa o staging
+  receberStaging = receberStaging.filter(it => it.amigo !== amigo);
+  if (amigoReceber === amigo) amigoReceber = null;
+  salvarReceber();
+  render();
+}
+
 function removerGrupoAmigo(amigo) {
   if (!confirm(`Remover todas as figurinhas reservadas para ${amigo}?`)) return;
   // Devolve ao álbum
@@ -748,9 +767,15 @@ function renderDeQuemTirarSolo() {
       : amigos.map(amigo => {
           const ehSemNome = amigo === "Sem nome";
           return `<div style="margin-bottom:8px;background:#1e293b;border-radius:10px;padding:10px">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-              <div style="font-size:12px;font-weight:800;color:${ehSemNome?"#f59e0b":"#e2e8f0"}">🤝 ${amigo} <span style="font-size:10px;color:#64748b">(${porAmigo[amigo].length})</span></div>
-              ${ehSemNome ? `<button onclick="renomearAmigo()" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">Identificar amigo</button>` : ""}
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+              <div style="display:flex;align-items:center;gap:6px">
+                <div style="font-size:12px;font-weight:800;color:${ehSemNome?"#f59e0b":"#e2e8f0"}">🤝 ${amigo} <span style="font-size:10px;color:#64748b">(${porAmigo[amigo].length})</span></div>
+                ${ehSemNome ? `<button onclick="renomearAmigo()" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">Identificar</button>` : ""}
+              </div>
+              <div style="display:flex;gap:4px">
+                <button onclick="confirmarGrupoDoacao('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Já peguei</button>
+                <button onclick="removerGrupoAmigo('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #ef4444;background:#ef444420;color:#ef4444">✕</button>
+              </div>
             </div>
             <div class="troca-chips">
               ${porAmigo[amigo].map(it => `
@@ -779,7 +804,13 @@ function renderPraQuemDarSolo() {
     ${amigos.length === 0
       ? `<div style="font-size:12px;color:#475569;text-align:center;padding:8px 0">Nenhuma figurinha aguardando — importe a lista de repetidas de um amigo</div>`
       : amigos.map(amigo => `<div style="margin-bottom:8px;background:#1e293b;border-radius:10px;padding:10px">
-          <div style="font-size:12px;font-weight:800;color:#e2e8f0">🤝 ${amigo} vai me dar <span style="font-size:10px;color:#64748b">(${porAmigo[amigo].length})</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+            <div style="font-size:12px;font-weight:800;color:#e2e8f0">🤝 ${amigo} vai me dar <span style="font-size:10px;color:#64748b">(${porAmigo[amigo].length})</span></div>
+            <div style="display:flex;gap:4px">
+              <button onclick="receberGrupo('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Recebi</button>
+              <button onclick="removerGrupoReceber('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #ef4444;background:#ef444420;color:#ef4444">✕</button>
+            </div>
+          </div>
           <div class="troca-chips">
             ${porAmigo[amigo].map(it => `<button onclick="confirmarItemReceber(${it._i})" class="chip"
               style="background:#22c55e15;color:#22c55e;border-color:#22c55e40;cursor:pointer">
@@ -877,8 +908,9 @@ function renderDeQuemTirar() {
                 ${ehSemNome ? `<button onclick="renomearAmigo()" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">Identificar amigo</button>` : ""}
               </div>
               <div style="display:flex;gap:4px">
-                <button onclick="exportarGrupoDoacao('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6">📋 Exportar</button>
-                <button onclick="removerGrupoAmigo('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #ef4444;background:#ef444420;color:#ef4444">✕ Remover</button>
+                <button onclick="confirmarGrupoDoacao('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Já peguei</button>
+                <button onclick="exportarGrupoDoacao('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6">📋</button>
+                <button onclick="removerGrupoAmigo('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #ef4444;background:#ef444420;color:#ef4444">✕</button>
               </div>
             </div>
             ${Object.entries(porFilho).map(([filho, itens]) => {
@@ -981,8 +1013,10 @@ function renderPraQuemDar() {
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
               <div style="font-size:12px;font-weight:800;color:#e2e8f0">🤝 ${amigo} vai me dar <span style="font-size:10px;color:#64748b">(${porAmigo[amigo].length})</span></div>
               <div style="display:flex;gap:4px">
-                <button onclick="exportarGrupoReceber(this.dataset.amigo)" data-amigo="${amigo}" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6">📋 Exportar</button>
-                <button onclick="removerGrupoReceber(this.dataset.amigo)" data-amigo="${amigo}" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #ef4444;background:#ef444420;color:#ef4444">✕ Remover</button>
+                <button onclick="receberGrupo(this.dataset.amigo)" data-amigo="${amigo}" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Recebi</button>
+                <button onclick="exportarGrupoReceber(this.dataset.amigo)" data-amigo="${amigo}" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6">📋</button>
+                <button onclick="removerGrupoReceber(this.dataset.amigo)" data-amigo="${amigo}" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #ef4444;background:#ef444420;color:#ef4444">✕</button>
+              </div>
               </div>
             </div>
             ${Object.entries(porFilho).map(([filho, itens]) => {
