@@ -681,6 +681,14 @@ function exportarGrupoReceber(amigo) {
   } else { prompt("Copie:", texto); }
 }
 
+function marcarSeparado(amigo) {
+  doacaoStaging.forEach(it => {
+    if (it.amigo === amigo) it.separado = true;
+  });
+  salvarDoacao();
+  render();
+}
+
 function confirmarGrupoDoacao(amigo) {
   const itens = doacaoStaging.filter(it => it.amigo === amigo);
   itens.forEach(item => {
@@ -773,7 +781,10 @@ function renderDeQuemTirarSolo() {
                 ${ehSemNome ? `<button onclick="renomearAmigo()" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">Identificar</button>` : ""}
               </div>
               <div style="display:flex;gap:4px">
-                <button onclick="confirmarGrupoDoacao('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Já peguei</button>
+                ${porAmigo[amigo].every(it => it.separado)
+                  ? `<span style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">📦 Separado</span>`
+                  : `<button onclick="marcarSeparado('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">📦 Separei</button>`}
+                <button onclick="confirmarGrupoDoacao('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Entreguei</button>
                 <button onclick="removerGrupoAmigo('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #ef4444;background:#ef444420;color:#ef4444">✕</button>
               </div>
             </div>
@@ -1052,7 +1063,10 @@ function renderDeQuemTirar() {
                 ${ehSemNome ? `<button onclick="renomearAmigo()" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">Identificar amigo</button>` : ""}
               </div>
               <div style="display:flex;gap:4px">
-                <button onclick="confirmarGrupoDoacao('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Já peguei</button>
+                ${porAmigo[amigo].every(it => it.separado)
+                  ? `<span style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">📦 Separado</span>`
+                  : `<button onclick="marcarSeparado('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:#f59e0b20;color:#f59e0b">📦 Separei</button>`}
+                <button onclick="confirmarGrupoDoacao('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #22c55e;background:#22c55e20;color:#22c55e">✓ Entreguei</button>
                 <button onclick="exportarGrupoDoacao('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6">📋</button>
                 <button onclick="removerGrupoAmigo('${amigo}')" style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #ef4444;background:#ef444420;color:#ef4444">✕</button>
               </div>
@@ -1914,7 +1928,7 @@ function salvarSessao() {
 
 function salvarDoacao() {
   try {
-    const slim = doacaoStaging.map(({selId, idx, numLabel, origem, amigo}) => ({selId, idx, numLabel, origem, amigo}));
+    const slim = doacaoStaging.map(({selId, idx, numLabel, origem, amigo, separado}) => ({selId, idx, numLabel, origem, amigo, separado: separado || false}));
     localStorage.setItem("copa2026-doacao", JSON.stringify({ staging: slim, amigoAtual }));
   } catch(e) {}
 }
