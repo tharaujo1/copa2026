@@ -876,6 +876,94 @@ function renderRepetidasAmigo() {
   return chips;
 }
 
+function calcularBolao() {
+  const nomes = config.nomes;
+  const nFilhos = nomes.length;
+
+  // Apenas seleções principais (48 países, excluindo FWC e CC)
+  const selecoesPaises = SELECOES_ALFA.filter(s => !['FWC1','FWC2','FWC3','CC'].includes(s.id));
+  const total = selecoesPaises.length; // 48
+  const tamBloco = Math.floor(total / nFilhos);
+  const resto = total % nFilhos;
+
+  // Divide em blocos contínuos de tamanho igual (ou quase)
+  const blocos = [];
+  let inicio = 0;
+  for (let i = 0; i < nFilhos; i++) {
+    const tam = tamBloco + (i < resto ? 1 : 0);
+    blocos.push(selecoesPaises.slice(inicio, inicio + tam));
+    inicio += tam;
+  }
+
+  // Para cada permutação de filhos nos blocos, calcula o total de repetidas
+  // Com 3 filhos = 6 permutações — força bruta simples
+  function permutacoes(arr) {
+    if (arr.length <= 1) return [arr];
+    return arr.flatMap((v, i) =>
+      permutacoes([...arr.slice(0,i), ...arr.slice(i+1)]).map(p => [v, ...p])
+    );
+  }
+
+  const perms = permutacoes(nomes);
+  let melhorPerm = null;
+  let melhorVariancia = Infinity;
+
+  perms.forEach(perm => {
+    // Calcula repetidas de cada filho no bloco atribuído
+    const repetidasPorFilho = perm.map((nome, i) => {
+      return blocos[i].reduce((acc, s) => {
+        return acc + state[nome][s.id].reduce((a, qtd) => a + Math.max(0, qtd - 1), 0);
+      }, 0);
+    });
+    // Minimiza a variância — distribuição mais equilibrada
+    const media = repetidasPorFilho.reduce((a,b) => a+b, 0) / nFilhos;
+    const variancia = repetidasPorFilho.reduce((acc, v) => acc + Math.pow(v - media, 2), 0);
+    if (variancia < melhorVariancia) {
+      melhorVariancia = variancia;
+      melhorPerm = { perm, repetidasPorFilho };
+    }
+  });
+
+  // Renderiza resultado
+  const { perm, repetidasPorFilho } = melhorPerm;
+  let texto = `📊 Distribuição do bolão — Copa 2026\n\n`;
+
+  const html = perm.map((nome, i) => {
+    const c = corNome(nome);
+    const bloco = blocos[i];
+    const primeira = bloco[0].sigla;
+    const ultima = bloco[bloco.length-1].sigla;
+    texto += `${nome} (${primeira}→${ultima}):\n${bloco.map(s => s.sigla).join(', ')}\n\n`;
+
+    return `<div style="margin-bottom:10px;background:#1e293b;border-radius:10px;padding:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="font-size:12px;font-weight:800;color:${c.accent}">${nome}</div>
+        <div style="font-size:11px;color:#64748b">${repetidasPorFilho[i]} repetidas já neste bloco</div>
+      </div>
+      <div style="font-size:11px;color:#94a3b8;margin-bottom:6px;font-weight:600">${primeira} → ${ultima} (${bloco.length} seleções)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px">
+        ${bloco.map(s => `<span style="background:${c.accent}15;color:${c.accent};border:1px solid ${c.accent}30;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700">
+          ${FLAGS[s.id]} ${s.sigla}
+        </span>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+
+  const btnCopiar = `<button onclick="copiarBolao()" style="width:100%;padding:8px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid #3b82f6;background:#3b82f620;color:#3b82f6;margin-top:4px">
+    📋 Copiar para WhatsApp
+  </button>`;
+
+  window._bolaoTexto = texto;
+  document.getElementById("bolao-resultado").innerHTML = html + btnCopiar;
+}
+
+function copiarBolao() {
+  if (!window._bolaoTexto) return;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(window._bolaoTexto).then(() => alert("✅ Copiado! Cole no WhatsApp."));
+  } else { prompt("Copie:", window._bolaoTexto); }
+}
+
 function gerarPack() {
   const nome = document.getElementById("pack-nome").value.trim();
   const qtd = parseInt(document.getElementById("pack-qtd").value);
@@ -2847,29 +2935,28 @@ function renderTrocas() {
   // Coleta todas figurinhas repetidas da família, com quem tem mais de cada
   function gerarPackFamilia(qtdTotal, nomePessoa) {
     const nomesFam = config.nomes;
-    // Monta lista de todas as figurinhas com repetidas, por filho
-    // Cada item: { selId, idx, numLabel, sel, porFilho: {nome: qtdExtra} }
+
+    // Monta lista de todas as figurinhas com repetidas, iterando por SELECAO e IDX
+    // Prioridade = figurinha individual com mais cópias extras no total da família
     const mapa = {};
-    nomesFam.forEach(nome => {
-      SELECOES.forEach(s => {
-        state[nome][s.id].forEach((qtd, idx) => {
-          if (qtd >= 2) {
-            const key = `${s.id}|${idx}`;
-            if (!mapa[key]) {
-              const numLabel = s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
-              mapa[key] = { sel: s, idx, numLabel, porFilho: {} };
-            }
-            mapa[key].porFilho[nome] = qtd - 1; // extras disponíveis
-          }
+    SELECOES.forEach(s => {
+      Array.from({length: s.qtd}, (_, idx) => idx).forEach(idx => {
+        const numLabel = s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
+        const key = `${s.id}|${idx}`;
+        const porFilho = {};
+        nomesFam.forEach(nome => {
+          const qtd = state[nome][s.id][idx];
+          if (qtd >= 2) porFilho[nome] = qtd - 1;
         });
+        const totalExtras = Object.values(porFilho).reduce((a,b) => a+b, 0);
+        if (totalExtras > 0) {
+          mapa[key] = { sel: s, idx, numLabel, porFilho, totalExtras };
+        }
       });
     });
 
-    // Ordena por total de extras decrescente (mais repetidas primeiro)
-    const lista = Object.values(mapa).map(item => {
-      const totalExtras = Object.values(item.porFilho).reduce((a,b) => a+b, 0);
-      return { ...item, totalExtras };
-    }).sort((a, b) => b.totalExtras - a.totalExtras);
+    // Ordena por total de extras desta figurinha específica (×7 vem antes de ×3)
+    const lista = Object.values(mapa).sort((a, b) => b.totalExtras - a.totalExtras);
 
     // Distribui proporcionalmente entre filhos
     // Cota por filho: qtdTotal / nFilhos (arredondado)
@@ -2937,7 +3024,16 @@ function renderTrocas() {
       <div id="pack-resultado"></div>
     </div>`;
 
-  const topRepetidas = [];
+  // ── Distribuidor de bolão
+  const bolaoHtml = `
+    <div style="margin-bottom:12px;background:#111827;border-radius:12px;padding:12px 14px;border:1px solid #334155">
+      <div style="font-size:13px;font-weight:800;color:#e2e8f0;margin-bottom:4px">📊 Distribuir bolão de repetidas</div>
+      <div style="font-size:11px;color:#64748b;margin-bottom:10px">Divide as 48 seleções em 3 blocos alfabéticos — cada filho fica com o bloco onde já tem menos repetidas</div>
+      <button onclick="calcularBolao()" style="width:100%;padding:9px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff">
+        ▶ Calcular melhor distribuição
+      </button>
+      <div id="bolao-resultado" style="margin-top:10px"></div>
+    </div>`;
   SELECOES.forEach(s => {
     const totalExtras = state[nomeAtivo][s.id].reduce((acc, qtd) => acc + Math.max(0, qtd - 1), 0);
     if (totalExtras > 0) topRepetidas.push({ s, totalExtras });
@@ -2962,7 +3058,7 @@ function renderTrocas() {
       }).join("")}
     </div>` : "";
 
-  return rankingRepetidas + packHtml + irmaosHtml + extrasAmigosHtml + reservasHtml;
+  return rankingRepetidas + packHtml + bolaoHtml + irmaosHtml + extrasAmigosHtml + reservasHtml;
 }
 
 // ── STATS ────────────────────────────────────────────────────────────────────
