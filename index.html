@@ -2082,21 +2082,13 @@ function salvarConfig() {
 function salvarEstado() {
   try {
     localStorage.setItem("copa2026-state", JSON.stringify(state));
-    // Limpa automaticamente stagings que já foram resolvidos no álbum
-    let mudouDoacao = false, mudouReceber = false;
-    // De quem tirar — remove se o filho de origem não tem mais aquela figurinha
-    doacaoStaging = doacaoStaging.filter(item => {
-      const ainda = state[item.origem] && state[item.origem][item.selId] && state[item.origem][item.selId][item.idx] >= 2;
-      if (!ainda) mudouDoacao = true;
-      return ainda;
-    });
-    // Pra quem dar — remove se o filho já tem aquela figurinha no álbum
+    // Limpa receberStaging quando álbum já tem a figurinha
+    let mudouReceber = false;
     receberStaging = receberStaging.filter(item => {
       const jatem = state[item.paraFilho] && state[item.paraFilho][item.selId] && state[item.paraFilho][item.selId][item.idx] >= 1;
       if (jatem) mudouReceber = true;
       return !jatem;
     });
-    if (mudouDoacao) salvarDoacao();
     if (mudouReceber) salvarReceber();
     const toast = document.getElementById("toast");
     if (toast) {
