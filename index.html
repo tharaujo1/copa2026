@@ -876,6 +876,62 @@ function renderRepetidasAmigo() {
   return chips;
 }
 
+function gerarPack() {
+  const nome = document.getElementById("pack-nome").value.trim();
+  const qtd = parseInt(document.getElementById("pack-qtd").value);
+  if (!nome) { alert("Informe o nome da pessoa."); return; }
+  if (!qtd || qtd < 1) { alert("Informe a quantidade."); return; }
+
+  const resultado = gerarPackFamilia(qtd, nome);
+  if (resultado.length === 0) {
+    document.getElementById("pack-resultado").innerHTML =
+      `<div style="color:#ef4444;font-size:12px;text-align:center;padding:8px">Não há repetidas suficientes para montar esse pack.</div>`;
+    return;
+  }
+
+  // Verifica se já tem reservas para esta pessoa
+  const jaTemReserva = doacaoStaging.some(it => it.amigo === nome);
+  if (jaTemReserva) {
+    if (!confirm(`${nome} já tem figurinhas reservadas.\n\nOK = adicionar ao pack existente\nCancelar = substituir`)) {
+      // Substituir — devolve as antigas ao álbum
+      doacaoStaging.filter(it => it.amigo === nome).forEach(item => {
+        if (state[item.origem] && state[item.origem][item.selId]) {
+          state[item.origem][item.selId][item.idx]++;
+        }
+      });
+      doacaoStaging = doacaoStaging.filter(it => it.amigo !== nome);
+    }
+  }
+
+  // Adiciona ao doacaoStaging e desconta do álbum imediatamente
+  resultado.forEach(item => {
+    const entry = {
+      selId: item.sel.id,
+      idx: item.idx,
+      sel: item.sel,
+      numLabel: item.numLabel,
+      origem: item.filho,
+      amigo: nome
+    };
+    doacaoStaging.push(entry);
+    if (state[item.filho][item.sel.id][item.idx] > 0) {
+      state[item.filho][item.sel.id][item.idx]--;
+    }
+  });
+
+  amigoAtual = nome;
+  salvarEstado();
+  salvarDoacao();
+
+  document.getElementById("pack-resultado").innerHTML =
+    `<div style="color:#22c55e;font-size:12px;text-align:center;padding:8px">
+      ✅ ${resultado.length} figurinhas separadas para ${nome}!<br>
+      <span style="color:#64748b">Aparece em Reservas ativas → De quem tirar</span>
+    </div>`;
+
+  render();
+}
+
 function renderDeQuemTirar() {
   // Migra itens sem amigo para "Sem nome"
   doacaoStaging.forEach(item => { if (!item.amigo) item.amigo = "Sem nome"; });
@@ -2784,7 +2840,129 @@ function renderTrocas() {
       ${cardsHtml}
     </div>` : "";
 
-  return irmaosHtml + extrasAmigosHtml + reservasHtml;
+  // ── Ranking top 5 repetidas do filho ativo + Gerador de pack
+  const nomeAtivo = config.nomes[jogadorAtivo];
+  const cAtivo = corDoJogador(jogadorAtivo);
+
+  // Coleta todas figurinhas repetidas da família, com quem tem mais de cada
+  function gerarPackFamilia(qtdTotal, nomePessoa) {
+    const nomesFam = config.nomes;
+    // Monta lista de todas as figurinhas com repetidas, por filho
+    // Cada item: { selId, idx, numLabel, sel, porFilho: {nome: qtdExtra} }
+    const mapa = {};
+    nomesFam.forEach(nome => {
+      SELECOES.forEach(s => {
+        state[nome][s.id].forEach((qtd, idx) => {
+          if (qtd >= 2) {
+            const key = `${s.id}|${idx}`;
+            if (!mapa[key]) {
+              const numLabel = s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
+              mapa[key] = { sel: s, idx, numLabel, porFilho: {} };
+            }
+            mapa[key].porFilho[nome] = qtd - 1; // extras disponíveis
+          }
+        });
+      });
+    });
+
+    // Ordena por total de extras decrescente (mais repetidas primeiro)
+    const lista = Object.values(mapa).map(item => {
+      const totalExtras = Object.values(item.porFilho).reduce((a,b) => a+b, 0);
+      return { ...item, totalExtras };
+    }).sort((a, b) => b.totalExtras - a.totalExtras);
+
+    // Distribui proporcionalmente entre filhos
+    // Cota por filho: qtdTotal / nFilhos (arredondado)
+    const nFilhos = nomesFam.length;
+    const cotaBase = Math.floor(qtdTotal / nFilhos);
+    const resto = qtdTotal % nFilhos;
+    const cotas = {}; // quanto cada filho ainda precisa ceder
+    nomesFam.forEach((nome, i) => { cotas[nome] = cotaBase + (i < resto ? 1 : 0); });
+
+    const resultado = []; // { sel, idx, numLabel, filho }
+    const usadas = new Set(); // para não repetir figurinha
+
+    // Passa 1: tenta pegar de quem tem mais extras daquela figurinha
+    for (const item of lista) {
+      if (resultado.length >= qtdTotal) break;
+      const key = `${item.sel.id}|${item.idx}`;
+      if (usadas.has(key)) continue; // já escolhida
+
+      // Escolhe o filho com mais extras DESTA figurinha e que ainda tem cota
+      const candidatos = Object.entries(item.porFilho)
+        .filter(([nome, qtd]) => qtd > 0 && cotas[nome] > 0)
+        .sort((a, b) => b[1] - a[1]); // mais extras primeiro
+
+      if (candidatos.length === 0) continue;
+
+      const [filhoEscolhido] = candidatos[0];
+      resultado.push({ sel: item.sel, idx: item.idx, numLabel: item.numLabel, filho: filhoEscolhido });
+      cotas[filhoEscolhido]--;
+      usadas.add(key);
+    }
+
+    // Passa 2: se algum filho ainda tem cota, pega mais figurinhas dele
+    for (const nome of nomesFam) {
+      if (cotas[nome] <= 0) continue;
+      for (const item of lista) {
+        if (resultado.length >= qtdTotal) break;
+        if (cotas[nome] <= 0) break;
+        const key = `${item.sel.id}|${item.idx}`;
+        if (usadas.has(key)) continue;
+        if (!item.porFilho[nome] || item.porFilho[nome] <= 0) continue;
+        resultado.push({ sel: item.sel, idx: item.idx, numLabel: item.numLabel, filho: nome });
+        cotas[nome]--;
+        usadas.add(key);
+      }
+    }
+
+    return resultado;
+  }
+
+  // Estado do gerador (persiste enquanto na aba)
+  if (!window._packState) window._packState = { nome: '', qtd: '', resultado: null };
+
+  const packHtml = `
+    <div style="margin-bottom:12px;background:#111827;border-radius:12px;padding:12px 14px;border:1px solid #334155">
+      <div style="font-size:13px;font-weight:800;color:#e2e8f0;margin-bottom:10px">📦 Montar pack para devolver</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input id="pack-nome" type="text" placeholder="Nome da pessoa" value="${window._packState.nome}"
+          style="flex:1;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:7px 10px;color:#e2e8f0;font-size:12px">
+        <input id="pack-qtd" type="number" placeholder="Qtd" min="1" value="${window._packState.qtd}"
+          style="width:64px;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:7px 8px;color:#e2e8f0;font-size:12px;text-align:center">
+        <button onclick="gerarPack()" style="padding:7px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000">
+          ▶ Gerar
+        </button>
+      </div>
+      <div id="pack-resultado"></div>
+    </div>`;
+
+  const topRepetidas = [];
+  SELECOES.forEach(s => {
+    const totalExtras = state[nomeAtivo][s.id].reduce((acc, qtd) => acc + Math.max(0, qtd - 1), 0);
+    if (totalExtras > 0) topRepetidas.push({ s, totalExtras });
+  });
+  topRepetidas.sort((a, b) => b.totalExtras - a.totalExtras);
+  const top5 = topRepetidas.slice(0, 5);
+
+  const rankingRepetidas = top5.length > 0 ? `
+    <div style="margin-bottom:12px;background:#111827;border-radius:12px;padding:12px 14px;border:1px solid ${cAtivo.accent}30">
+      <div style="font-size:13px;font-weight:800;color:${cAtivo.accent};margin-bottom:10px">🔁 Mais repetidas — ${nomeAtivo}</div>
+      ${top5.map((item, i) => {
+        const pct = Math.round(item.totalExtras / Math.max(...topRepetidas.map(t => t.totalExtras)) * 100);
+        return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #1e293b">
+          <span style="font-size:11px;color:#475569;min-width:14px">${i+1}</span>
+          <span style="font-size:16px">${FLAGS[item.s.id]}</span>
+          <span style="font-size:12px;font-weight:700;color:#e2e8f0;flex:1">${item.s.nome}</span>
+          <div style="width:60px;height:4px;border-radius:2px;background:#1e293b">
+            <div style="width:${pct}%;height:100%;border-radius:2px;background:${cAtivo.accent}"></div>
+          </div>
+          <span style="font-size:12px;font-weight:900;color:${cAtivo.accent};min-width:30px;text-align:right">×${item.totalExtras}</span>
+        </div>`;
+      }).join("")}
+    </div>` : "";
+
+  return rankingRepetidas + packHtml + irmaosHtml + extrasAmigosHtml + reservasHtml;
 }
 
 // ── STATS ────────────────────────────────────────────────────────────────────
