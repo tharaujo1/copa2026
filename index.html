@@ -975,6 +975,82 @@ function copiarBolao() {
   } else { prompt("Copie:", window._bolaoTexto); }
 }
 
+
+// Gera pack de figurinhas para devolver proporcional entre filhos
+  // Coleta todas figurinhas repetidas da família, com quem tem mais de cada
+function gerarPackFamilia(qtdTotal, nomePessoa) {
+  const nomesFam = config.nomes;
+
+  // Monta lista de todas as figurinhas com repetidas, iterando por SELECAO e IDX
+  // Prioridade = figurinha individual com mais cópias extras no total da família
+  const mapa = {};
+  SELECOES.forEach(s => {
+    Array.from({length: s.qtd}, (_, idx) => idx).forEach(idx => {
+      const numLabel = s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
+      const key = `${s.id}|${idx}`;
+      const porFilho = {};
+      nomesFam.forEach(nome => {
+        const qtd = state[nome][s.id][idx];
+        if (qtd >= 2) porFilho[nome] = qtd - 1;
+      });
+      const totalExtras = Object.values(porFilho).reduce((a,b) => a+b, 0);
+      if (totalExtras > 0) {
+        mapa[key] = { sel: s, idx, numLabel, porFilho, totalExtras };
+      }
+    });
+  });
+
+  // Ordena por total de extras desta figurinha específica (×7 vem antes de ×3)
+  const lista = Object.values(mapa).sort((a, b) => b.totalExtras - a.totalExtras);
+
+  // Distribui proporcionalmente entre filhos
+  // Cota por filho: qtdTotal / nFilhos (arredondado)
+  const nFilhos = nomesFam.length;
+  const cotaBase = Math.floor(qtdTotal / nFilhos);
+  const resto = qtdTotal % nFilhos;
+  const cotas = {}; // quanto cada filho ainda precisa ceder
+  nomesFam.forEach((nome, i) => { cotas[nome] = cotaBase + (i < resto ? 1 : 0); });
+
+  const resultado = []; // { sel, idx, numLabel, filho }
+  const usadas = new Set(); // para não repetir figurinha
+
+  // Passa 1: tenta pegar de quem tem mais extras daquela figurinha
+  for (const item of lista) {
+    if (resultado.length >= qtdTotal) break;
+    const key = `${item.sel.id}|${item.idx}`;
+    if (usadas.has(key)) continue; // já escolhida
+
+    // Escolhe o filho com mais extras DESTA figurinha e que ainda tem cota
+    const candidatos = Object.entries(item.porFilho)
+      .filter(([nome, qtd]) => qtd > 0 && cotas[nome] > 0)
+      .sort((a, b) => b[1] - a[1]); // mais extras primeiro
+
+    if (candidatos.length === 0) continue;
+
+    const [filhoEscolhido] = candidatos[0];
+    resultado.push({ sel: item.sel, idx: item.idx, numLabel: item.numLabel, filho: filhoEscolhido });
+    cotas[filhoEscolhido]--;
+    usadas.add(key);
+  }
+
+  // Passa 2: se algum filho ainda tem cota, pega mais figurinhas dele
+  for (const nome of nomesFam) {
+    if (cotas[nome] <= 0) continue;
+    for (const item of lista) {
+      if (resultado.length >= qtdTotal) break;
+      if (cotas[nome] <= 0) break;
+      const key = `${item.sel.id}|${item.idx}`;
+      if (usadas.has(key)) continue;
+      if (!item.porFilho[nome] || item.porFilho[nome] <= 0) continue;
+      resultado.push({ sel: item.sel, idx: item.idx, numLabel: item.numLabel, filho: nome });
+      cotas[nome]--;
+      usadas.add(key);
+    }
+  }
+
+  return resultado;
+}
+
 function gerarPack() {
   const nome = document.getElementById("pack-nome").value.trim();
   const qtd = parseInt(document.getElementById("pack-qtd").value);
@@ -2946,79 +3022,7 @@ function renderTrocas() {
   const nomeAtivo = config.nomes[jogadorAtivo];
   const cAtivo = corDoJogador(jogadorAtivo);
 
-  // Coleta todas figurinhas repetidas da família, com quem tem mais de cada
-  function gerarPackFamilia(qtdTotal, nomePessoa) {
-    const nomesFam = config.nomes;
 
-    // Monta lista de todas as figurinhas com repetidas, iterando por SELECAO e IDX
-    // Prioridade = figurinha individual com mais cópias extras no total da família
-    const mapa = {};
-    SELECOES.forEach(s => {
-      Array.from({length: s.qtd}, (_, idx) => idx).forEach(idx => {
-        const numLabel = s.inicio !== undefined ? (s.inicio+idx === 0 ? "00" : s.inicio+idx) : idx+1;
-        const key = `${s.id}|${idx}`;
-        const porFilho = {};
-        nomesFam.forEach(nome => {
-          const qtd = state[nome][s.id][idx];
-          if (qtd >= 2) porFilho[nome] = qtd - 1;
-        });
-        const totalExtras = Object.values(porFilho).reduce((a,b) => a+b, 0);
-        if (totalExtras > 0) {
-          mapa[key] = { sel: s, idx, numLabel, porFilho, totalExtras };
-        }
-      });
-    });
-
-    // Ordena por total de extras desta figurinha específica (×7 vem antes de ×3)
-    const lista = Object.values(mapa).sort((a, b) => b.totalExtras - a.totalExtras);
-
-    // Distribui proporcionalmente entre filhos
-    // Cota por filho: qtdTotal / nFilhos (arredondado)
-    const nFilhos = nomesFam.length;
-    const cotaBase = Math.floor(qtdTotal / nFilhos);
-    const resto = qtdTotal % nFilhos;
-    const cotas = {}; // quanto cada filho ainda precisa ceder
-    nomesFam.forEach((nome, i) => { cotas[nome] = cotaBase + (i < resto ? 1 : 0); });
-
-    const resultado = []; // { sel, idx, numLabel, filho }
-    const usadas = new Set(); // para não repetir figurinha
-
-    // Passa 1: tenta pegar de quem tem mais extras daquela figurinha
-    for (const item of lista) {
-      if (resultado.length >= qtdTotal) break;
-      const key = `${item.sel.id}|${item.idx}`;
-      if (usadas.has(key)) continue; // já escolhida
-
-      // Escolhe o filho com mais extras DESTA figurinha e que ainda tem cota
-      const candidatos = Object.entries(item.porFilho)
-        .filter(([nome, qtd]) => qtd > 0 && cotas[nome] > 0)
-        .sort((a, b) => b[1] - a[1]); // mais extras primeiro
-
-      if (candidatos.length === 0) continue;
-
-      const [filhoEscolhido] = candidatos[0];
-      resultado.push({ sel: item.sel, idx: item.idx, numLabel: item.numLabel, filho: filhoEscolhido });
-      cotas[filhoEscolhido]--;
-      usadas.add(key);
-    }
-
-    // Passa 2: se algum filho ainda tem cota, pega mais figurinhas dele
-    for (const nome of nomesFam) {
-      if (cotas[nome] <= 0) continue;
-      for (const item of lista) {
-        if (resultado.length >= qtdTotal) break;
-        if (cotas[nome] <= 0) break;
-        const key = `${item.sel.id}|${item.idx}`;
-        if (usadas.has(key)) continue;
-        if (!item.porFilho[nome] || item.porFilho[nome] <= 0) continue;
-        resultado.push({ sel: item.sel, idx: item.idx, numLabel: item.numLabel, filho: nome });
-        cotas[nome]--;
-        usadas.add(key);
-      }
-    }
-
-    return resultado;
-  }
 
   // Estado do gerador (persiste enquanto na aba)
   if (!window._packState) window._packState = { nome: '', qtd: '', resultado: null };
