@@ -3060,6 +3060,8 @@ function renderTrocas() {
       </button>
       <div id="bolao-resultado" style="margin-top:10px"></div>
     </div>`;
+
+  const topRepetidas = [];
   SELECOES.forEach(s => {
     const totalExtras = state[nomeAtivo][s.id].reduce((acc, qtd) => acc + Math.max(0, qtd - 1), 0);
     if (totalExtras > 0) topRepetidas.push({ s, totalExtras });
