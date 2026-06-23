@@ -1527,15 +1527,18 @@ function processarImportacao() {
     }
     const paraReservar = [];
     linhas.forEach(({ siglaRaw, nums }) => {
-      nums.forEach(({ n: num }) => {
+      nums.forEach(({ n: num, qtd }) => {
         const sel = resolverSel(siglaRaw, num);
         if (!sel) return;
         const idx = numParaIdx(sel, num);
         if (idx < 0 || idx >= sel.qtd) return;
-        const origem = proximaOrigem(sel.id, idx);
-        if (!origem) return;
         const numLabel = sel.inicio !== undefined ? (sel.inicio+idx === 0 ? "00" : sel.inicio+idx) : idx+1;
-        paraReservar.push({ selId: sel.id, idx, sel, numLabel, origem, amigo: nomeAmigo });
+        // Reserva qtd vezes — cada cópia vai para o próximo filho com prioridade
+        for (let i = 0; i < qtd; i++) {
+          const origem = proximaOrigem(sel.id, idx);
+          if (!origem) break;
+          paraReservar.push({ selId: sel.id, idx, sel, numLabel, origem, amigo: nomeAmigo });
+        }
       });
     });
     if (paraReservar.length === 0) {
@@ -1587,9 +1590,9 @@ function processarImportacao() {
             if (totalA !== totalB) return totalA - totalB;
             return a.localeCompare(b);
           });
-        // Reserva só até a quantidade disponível do amigo
-        const qtdParaReservar = Math.min(qtdDisponivel, precisam.length);
-        precisam.slice(0, qtdParaReservar).forEach(filho => {
+        // Reserva 1 por filho que precisa — a qtd na lista de faltantes indica
+        // quantos filhos precisam, não quantas cópias o amigo tem
+        precisam.forEach(filho => {
           paraReservar.push({ selId: sel.id, idx, sel, numLabel, paraFilho: filho, amigo: nomeAmigo });
         });
       });
